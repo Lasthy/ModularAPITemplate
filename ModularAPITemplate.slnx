@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/src/Host/">
+    <Project Path="src/Host/ModularAPITemplate.Host/ModularAPITemplate.Host.csproj" />
+  </Folder>
+  <Folder Name="/src/SharedKernel/">
+    <Project Path="src/SharedKernel/ModularAPITemplate.SharedKernel/ModularAPITemplate.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Produtos/">
+    <Project Path="src/Modules/Produtos/ModularAPITemplate.Modules.Produtos.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Pedidos/">
+    <Project Path="src/Modules/Pedidos/ModularAPITemplate.Modules.Pedidos.csproj" />
+  </Folder>
+  <Folder Name="/tests/Modules/Produtos/">
+    <Project Path="tests/Modules/Produtos/ModularAPITemplate.Modules.Produtos.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Modules/Pedidos/">
+    <Project Path="tests/Modules/Pedidos/ModularAPITemplate.Modules.Pedidos.Tests.csproj" />
+  </Folder>
+</Solution>

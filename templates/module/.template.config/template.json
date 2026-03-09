@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "ModularAPITemplate",
+  "classifications": [
+    "Web",
+    "API",
+    "Module",
+    "Clean Architecture"
+  ],
+  "identity": "ModularAPITemplate.Module",
+  "name": "Modular API - Module",
+  "shortName": "modularapi-module",
+  "description": "Cria um novo módulo para uma solução ModularAPI, com estrutura Clean Architecture completa (Domain, Application, Infrastructure, Endpoints) e projeto de testes.",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "NomeModulo",
+  "preferNameDirectory": false,
+  "symbols": {
+    "SolutionPrefix": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "ModularAPITemplate",
+      "replaces": "ModularAPITemplate",
+      "fileRename": "ModularAPITemplate",
+      "description": "O prefixo/namespace da solution (ex: MinhaEmpresa.MeuProjeto)"
+    },
+    "schemaName": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": {
+        "source": "name",
+        "toLower": true
+      },
+      "replaces": "nomemodulo_schema"
+    }
+  },
+  "sources": [
+    {
+      "exclude": [
+        "**/[Bb]in/**",
+        "**/[Oo]bj/**",
+        ".template.config/**"
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Instruções pós-criação",
+      "manualInstructions": [
+        {
+          "text": "Após criar o módulo:\n1. Adicione os projetos à solution (.slnx)\n2. Adicione a referência do módulo no Host .csproj\n3. Registre o módulo no Program.cs:\n   builder.Services.AddModule<NomeModuloModule>(builder.Configuration);\n   app.MapModuleEndpoints<NomeModuloModule>();\n4. Adicione a connection string no appsettings.json:\n   \"NomeModuloDb\": \"sua-connection-string\""
+        }
+      ],
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "continueOnError": true
+    }
+  ]
+}
