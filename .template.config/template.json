@@ -26,6 +26,7 @@
             "**/[Oo]bj/**",
             ".template.config/**",
             "templates/**",
+            ".git/**",
             "**/.vs/**",
             "**/*.user",
             ".copilot/.tasks/**"
