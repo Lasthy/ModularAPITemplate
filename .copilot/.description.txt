@@ -46,7 +46,9 @@
 </requirements>
 
 <project_details>
-    ModularAPITemplate is a template to be used to develop modern Web APIs in a modular way, where each domain/module is responsible for a thing, and everything is tied together in a central project. It should be able to handle the database infrastructure with Entity Framework, infrastructure to handle workers, integration events (in process or external), authorization through multiple modules. Using this template, the developers shouldn't worry about the infrastructure, but mostly the business rules, and everythin should be organized in a simple and cohesive way.
+    ModularAPITemplate is a .NET 10 template for building modular Web APIs with Clean Architecture. Each domain/module is self-contained with its own DbContext, endpoints, use cases (via MediatR), and DI registrations. Modules communicate via integration events (IEventBus — in-process by default, replaceable by RabbitMQ/Kafka/etc). A SharedKernel centralizes abstractions: Entity, IModule, BaseDbContext (auto-dispatches domain events), IEventBus, BaseWorker, Result<T>, IRequestContext (provides authenticated user info, extensible per module). The Host ties everything together. Developers focus on business rules, not infrastructure. Each module gets its own OpenAPI document (Scalar or Swagger UI). A CLI template (modularapi-module) scaffolds new modules. Architecture docs live in .ARCHITECTURE.md (English, source of truth) and .ARCHITECTURE.pt-BR.md (Portuguese).
+
+    IMPORTANT: When using this for a real project, update this section with the actual project domain and requirements.
 </project_details>
 
 <critical>
