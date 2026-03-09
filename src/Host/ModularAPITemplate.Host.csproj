@@ -13,9 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\SharedKernel\ModularAPITemplate.SharedKernel\ModularAPITemplate.SharedKernel.csproj" />
-    <ProjectReference Include="..\..\Modules\Produtos\ModularAPITemplate.Modules.Produtos.csproj" />
-    <ProjectReference Include="..\..\Modules\Pedidos\ModularAPITemplate.Modules.Pedidos.csproj" />
+    <ProjectReference Include="..\SharedKernel\ModularAPITemplate.SharedKernel.csproj" />
+    <ProjectReference Include="..\Modules\Produtos\ModularAPITemplate.Modules.Produtos.csproj" />
   </ItemGroup>
 
 </Project>

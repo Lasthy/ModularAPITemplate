@@ -15,8 +15,24 @@
     "language": "C#",
     "type": "solution"
   },
-  "sourceName": "ModularAPITemplate",
   "preferNameDirectory": true,
+  "sourceName": "ModularAPITemplate",
+  "symbols": {
+    "sanitizedName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "replaceDashWithDot",
+      "replaces": "ModularAPITemplate",
+      "fileRename": "ModularAPITemplate"
+    }
+  },
+  "forms": {
+    "replaceDashWithDot": {
+      "identifier": "replace",
+      "pattern": "-",
+      "replacement": "."
+    }
+  },
   "sources": [
     {
       "modifiers": [
@@ -27,6 +43,8 @@
             ".template.config/**",
             "templates/**",
             ".git/**",
+			      "LICENSE.txt",
+            "README.md",
             "**/.vs/**",
             "**/*.user",
             ".copilot/.tasks/**"

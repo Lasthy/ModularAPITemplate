@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Modules\NomeModulo\ModularAPITemplate.Modules.NomeModulo.csproj" />
-    <ProjectReference Include="..\..\..\src\SharedKernel\ModularAPITemplate.SharedKernel\ModularAPITemplate.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\src\SharedKernel\ModularAPITemplate.SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>

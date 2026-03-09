@@ -1,4 +1,3 @@
-using ModularAPITemplate.Modules.Pedidos;
 using ModularAPITemplate.Modules.Produtos;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
 using ModularAPITemplate.SharedKernel.Modules;
@@ -11,7 +10,6 @@ builder.Services.AddSingleton<IEventBus, InProcessEventBus>();
 
 // ----- Registro de módulos -----
 builder.Services.AddModule<ProdutosModule>(builder.Configuration);
-builder.Services.AddModule<PedidosModule>(builder.Configuration);
 
 var app = builder.Build();
 
@@ -41,6 +39,5 @@ app.UseHttpsRedirection();
 
 // ----- Endpoints dos módulos -----
 app.MapModuleEndpoints<ProdutosModule>();
-app.MapModuleEndpoints<PedidosModule>();
 
 app.Run();

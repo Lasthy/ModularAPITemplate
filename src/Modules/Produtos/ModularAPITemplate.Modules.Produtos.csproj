@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\SharedKernel\ModularAPITemplate.SharedKernel\ModularAPITemplate.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\SharedKernel\ModularAPITemplate.SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>
