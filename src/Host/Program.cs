@@ -31,7 +31,12 @@ if (app.Environment.IsDevelopment())
     }
     else
     {
-        app.MapScalarApiReference();
+        app.MapScalarApiReference(options =>
+        {
+            options.Title = "ModularAPITemplate API Documentation";
+            options.WithTheme(ScalarTheme.DeepSpace);
+            options.AddDocuments(tracker.DocumentNames);
+        });
     }
 }
 

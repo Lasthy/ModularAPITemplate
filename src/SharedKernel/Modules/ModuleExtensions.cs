@@ -44,7 +44,17 @@ public static class ModuleExtensions
         var moduleName = TModule.ModuleName;
         tracker.Add(moduleName);
 
-        services.AddOpenApi(moduleName);
+        // Workaround: .NET 10's AddOpenApi lowercases the DocumentName internally, but the
+        // default ShouldInclude uses case-sensitive comparison against GroupName. Since our
+        // endpoints use PascalCase GroupName (e.g. "Identity") and DocumentName becomes
+        // "identity", the default filter silently excludes all endpoints.
+        // See: https://github.com/dotnet/aspnetcore — OpenApiServiceCollectionExtensions.cs
+        services.AddOpenApi(moduleName, options =>
+        {
+            options.ShouldInclude = (description) =>
+                description.GroupName is null
+                || string.Equals(description.GroupName, moduleName, StringComparison.OrdinalIgnoreCase);
+        });
 
         TModule.RegisterServices(services, configuration);
         return services;

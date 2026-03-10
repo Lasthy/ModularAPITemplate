@@ -50,7 +50,7 @@
       "description": "Instruções pós-criação",
       "manualInstructions": [
         {
-          "text": "Após criar o módulo:\n1. Adicione os projetos à solution (.slnx)\n2. Adicione a referência do módulo no Host .csproj\n3. Registre o módulo no Program.cs:\n   builder.Services.AddModule<NomeModuloModule>(builder.Configuration);\n   app.MapModuleEndpoints<NomeModuloModule>();\n4. Adicione a connection string no appsettings.json:\n   \"NomeModuloDb\": \"sua-connection-string\""
+          "text": "Após criar o módulo:\n1. Adicione os projetos à solution (.slnx) dentro das pastas virtuais /Modules/ e /Tests/:\n   dotnet sln add src/Modules/NomeModulo/ModularAPITemplate.Modules.NomeModulo.csproj --solution-folder Modules\n   dotnet sln add tests/Modules/NomeModulo/ModularAPITemplate.Modules.NomeModulo.Tests.csproj --solution-folder Tests\n2. Adicione a referência do módulo no Host .csproj\n3. Registre o módulo no Program.cs:\n   builder.Services.AddModule<NomeModuloModule>(builder.Configuration);\n   app.MapModuleEndpoints<NomeModuloModule>();\n4. Adicione a connection string no appsettings.json:\n   \"NomeModuloDb\": \"sua-connection-string\""
         }
       ],
       "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
