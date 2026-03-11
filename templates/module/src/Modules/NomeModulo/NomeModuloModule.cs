@@ -17,10 +17,18 @@ public sealed class NomeModuloModule : IModule
     public static void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
         // DbContext
-        services.AddDbContext<NomeModuloDbContext>(options =>
+        services.AddDbContext<NomeModuloDbContext>((sp, options) =>
+        {
             options.UseSqlServer(
                 configuration.GetConnectionString("NomeModuloDb"),
-                sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "nomemodulo_schema")));
+                sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "nomemodulo_schema"));
+            options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+            options.AddInterceptors(sp.GetRequiredService<OutboxSaveChangesInterceptor>());
+        });
+
+        services.AddHostedService<OutboxWorker<NomeModuloDbContext>>();
+
+        EventTypeRegistry.RegisterEventTypesFromAssembly(typeof(NomeModuloModule).Assembly);
 
         // MediatR handlers do módulo
         services.AddMediatR(cfg =>

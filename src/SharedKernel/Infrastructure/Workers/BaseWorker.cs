@@ -13,14 +13,15 @@ public abstract class BaseWorker(
     ILogger logger,
     TimeSpan? interval = null) : BackgroundService
 {
-    protected TimeSpan Interval { get; } = interval ?? TimeSpan.FromMinutes(1);
+    protected TimeSpan Interval { get; set; } = interval ?? TimeSpan.FromMinutes(1);
+    private bool _cancellationRequested = false;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var workerName = GetType().Name;
         logger.LogInformation("Worker {WorkerName} started.", workerName);
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested && !_cancellationRequested)
         {
             try
             {
@@ -36,6 +37,11 @@ public abstract class BaseWorker(
         }
 
         logger.LogInformation("Worker {WorkerName} stopped.", workerName);
+    }
+
+    protected void RequestCancellation()
+    {
+        _cancellationRequested = true;
     }
 
     /// <summary>

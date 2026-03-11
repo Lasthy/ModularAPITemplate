@@ -2,9 +2,7 @@
   <Project Path="src/Host/ModularAPITemplate.Host.csproj" />
   <Project Path="src/SharedKernel/ModularAPITemplate.SharedKernel.csproj" />
   <Folder Name="/Modules/">
-    <Project Path="src/Modules/Produtos/ModularAPITemplate.Modules.Produtos.csproj" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="tests/Modules/Produtos/ModularAPITemplate.Modules.Produtos.Tests.csproj" />
   </Folder>
 </Solution>

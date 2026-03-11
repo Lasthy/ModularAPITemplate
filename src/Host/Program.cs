@@ -1,4 +1,3 @@
-using ModularAPITemplate.Modules.Produtos;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
 using ModularAPITemplate.SharedKernel.Modules;
 using Scalar.AspNetCore;
@@ -9,7 +8,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IEventBus, InProcessEventBus>();
 
 // ----- Registro de módulos -----
-builder.Services.AddModule<ProdutosModule>(builder.Configuration);
 
 var app = builder.Build();
 
@@ -43,6 +41,5 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // ----- Endpoints dos módulos -----
-app.MapModuleEndpoints<ProdutosModule>();
 
 app.Run();

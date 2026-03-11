@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ModularAPITemplate.SharedKernel.Application.Context;
+using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 
 namespace ModularAPITemplate.SharedKernel.Modules;
 
@@ -26,6 +27,7 @@ public static class ModuleExtensions
         {
             services.AddHttpContextAccessor();
             services.AddScoped<IRequestContext, RequestContext>();
+            services.AddTransient<OutboxConfiguration>();
             _sharedServicesRegistered = true;
         }
 

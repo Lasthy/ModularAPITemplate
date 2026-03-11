@@ -1,3 +1,5 @@
+using MediatR;
+
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 
 /// <summary>
@@ -5,9 +7,8 @@ namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 /// Eventos de integração são publicados após a persistência e servem
 /// para comunicação assíncrona entre módulos/serviços.
 /// </summary>
-public interface IIntegrationEvent
+public interface IIntegrationEvent : INotification
 {
-    Guid EventId { get; }
+    Ulid EventId { get; }
     DateTime OccurredAt { get; }
-    string EventType { get; }
 }

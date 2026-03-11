@@ -28,14 +28,14 @@ public class RequestContext : IRequestContext
         _user = user;
     }
 
-    public Guid? UserId
+    public UserIdType? UserId
     {
         get
         {
             var sub = _user?.FindFirstValue(ClaimTypes.NameIdentifier)
                    ?? _user?.FindFirstValue("sub");
 
-            return Guid.TryParse(sub, out var id) ? id : null;
+            return sub != null ? UserIdType.Parse(sub) : (UserIdType?)null;
         }
     }
 

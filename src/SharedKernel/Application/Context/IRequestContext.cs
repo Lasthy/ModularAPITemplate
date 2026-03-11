@@ -11,7 +11,7 @@ public interface IRequestContext
     /// Identificador do usuário autenticado (claim "sub" ou "nameidentifier").
     /// Null se não autenticado.
     /// </summary>
-    Guid? UserId { get; }
+    UserIdType? UserId { get; }
 
     /// <summary>
     /// Nome do usuário autenticado.

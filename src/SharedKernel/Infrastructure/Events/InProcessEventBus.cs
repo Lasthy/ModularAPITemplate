@@ -17,18 +17,9 @@ public sealed class InProcessEventBus(
     {
         logger.LogInformation(
             "Publishing integration event {EventType} (Id: {EventId})",
-            integrationEvent.EventType,
+            integrationEvent.GetType().Name,
             integrationEvent.EventId);
 
-        if (integrationEvent is INotification notification)
-        {
-            await publisher.Publish(notification, cancellationToken);
-        }
-        else
-        {
-            logger.LogWarning(
-                "Event {EventType} does not implement INotification and will not be dispatched via MediatR.",
-                integrationEvent.EventType);
-        }
+        await publisher.Publish(integrationEvent, cancellationToken);
     }
 }
