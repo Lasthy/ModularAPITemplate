@@ -9,8 +9,7 @@ namespace ModularAPITemplate.Modules.NomeModulo.Infrastructure.Persistence;
 /// Cada módulo possui seu próprio contexto isolado.
 /// </summary>
 public sealed class NomeModuloDbContext(
-    DbContextOptions<NomeModuloDbContext> options,
-    IPublisher publisher) : DbContext(options), IBaseDbContext
+    DbContextOptions<NomeModuloDbContext> options) : DbContext(options), IBaseDbContext
 {
     // TODO: Adicionar DbSets
     // public DbSet<MinhaEntidade> MinhasEntidades => Set<MinhaEntidade>();

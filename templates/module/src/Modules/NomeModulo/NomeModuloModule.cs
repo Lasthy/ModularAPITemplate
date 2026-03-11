@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ModularAPITemplate.Modules.NomeModulo.Infrastructure.Persistence;
+using ModularAPITemplate.SharedKernel.Infrastructure.Events;
+using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
+using ModularAPITemplate.SharedKernel.Infrastructure.Workers;
 using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.Modules.NomeModulo;
@@ -28,7 +31,7 @@ public sealed class NomeModuloModule : IModule
 
         services.AddHostedService<OutboxWorker<NomeModuloDbContext>>();
 
-        EventTypeRegistry.RegisterEventTypesFromAssembly(typeof(NomeModuloModule).Assembly);
+        EventTypeRegistry.RegisterFromAssembly(typeof(NomeModuloModule).Assembly);
 
         // MediatR handlers do módulo
         services.AddMediatR(cfg =>
