@@ -13,7 +13,7 @@ public sealed class InProcessEventBus(
     ILogger<InProcessEventBus> logger) : IEventBus
 {
     public async Task PublishAsync<T>(T integrationEvent, CancellationToken cancellationToken = default)
-        where T : class, IIntegrationEvent
+        where T : IntegrationEvent
     {
         logger.LogInformation(
             "Publishing integration event {EventType} (Id: {EventId})",

@@ -4,8 +4,10 @@ using System.Reflection;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ModularAPITemplate.SharedKernel.Application.Context;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
+using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 
 namespace ModularAPITemplate.SharedKernel.Modules;
 
@@ -15,6 +17,8 @@ namespace ModularAPITemplate.SharedKernel.Modules;
 public static class ModuleExtensions
 {
     private static bool _sharedServicesRegistered;
+
+    private record ModuleAssemblyLoading { };
 
     public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)
     {
@@ -26,6 +30,8 @@ public static class ModuleExtensions
         var modulesSection = configuration.GetSection("Modules");
         if (!modulesSection.Exists())
             return services;
+
+        var logger = services.BuildServiceProvider().GetRequiredService<ILogger<ModuleAssemblyLoading>>();
 
         foreach (var moduleSection in modulesSection.GetChildren())
         {
@@ -57,8 +63,10 @@ public static class ModuleExtensions
                 moduleType = assembly.GetTypes()
                     .FirstOrDefault(t => typeof(IModule).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
             }
-            catch
+            catch(Exception ex)
             {
+                logger.LogError(ex, "Error occurred while trying to get module type from assembly {AssemblyName}", assemblyName);   
+
                 continue;
             }
 
@@ -76,9 +84,9 @@ public static class ModuleExtensions
             {
                 generic.Invoke(null, new object[] { services, moduleSection });
             }
-            catch
+            catch(Exception ex)
             {
-                // ignore invocation errors and continue
+                logger.LogError(ex, "Error occurred while trying to add module {ModuleName}", moduleName);
             }
         }
 
@@ -99,6 +107,7 @@ public static class ModuleExtensions
         {
             services.AddHttpContextAccessor();
             services.AddScoped<IRequestContext, RequestContext>();
+            services.AddScoped<AuditSaveChangesInterceptor>();
             _sharedServicesRegistered = true;
         }
         
