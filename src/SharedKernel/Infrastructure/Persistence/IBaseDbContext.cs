@@ -13,5 +13,6 @@ public interface IBaseDbContext
 {
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
 
+    public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

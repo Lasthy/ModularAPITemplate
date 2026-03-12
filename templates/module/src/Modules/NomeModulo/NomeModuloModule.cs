@@ -23,13 +23,18 @@ public sealed class NomeModuloModule : IModule
         services.AddDbContext<NomeModuloDbContext>((sp, options) =>
         {
             options.UseSqlServer(
-                configuration.GetConnectionString("NomeModuloDb"),
+                configuration[$"Modules:{ModuleName}:ConnectionString"],
                 sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "nomemodulo_schema"));
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
-            options.AddInterceptors(sp.GetRequiredService<OutboxSaveChangesInterceptor>());
         });
 
-        services.AddHostedService<OutboxWorker<NomeModuloDbContext>>();
+        // Outbox workers
+        services.AddHostedService<OutboxProcessingWorker<NomeModuloModule, NomeModuloDbContext>>();
+        services.AddHostedService<OutboxRecoveryWorker<NomeModuloModule, NomeModuloDbContext>>();
+        services.AddHostedService<OutboxCleanupWorker<NomeModuloModule, NomeModuloDbContext>>();
+
+        // Services
+        services.AddScoped<IIntegrationEventPublisher<NomeModuloDbContext>, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
 
         EventTypeRegistry.RegisterFromAssembly(typeof(NomeModuloModule).Assembly);
 

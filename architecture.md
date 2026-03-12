@@ -1,3 +1,6 @@
+TODO: update this to match the new updated architecture and features.
+TODO: update the module template later.
+
 # Architecture — ModularAPITemplate
 
 > **This is the source of truth.** A Portuguese version is available at [.ARCHITECTURE.pt-BR.md](.ARCHITECTURE.pt-BR.md).

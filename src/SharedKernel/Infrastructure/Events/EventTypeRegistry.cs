@@ -10,7 +10,7 @@ public static class EventTypeRegistry
     public static void Register<T>() where T : INotification
     {
         var type = typeof(T);
-        _types[type.Name] = type;
+        _types[type.FullName!] = type;
     }
 
     public static Type Resolve(string name)
@@ -31,6 +31,6 @@ public static class EventTypeRegistry
                 !t.IsInterface);
 
         foreach (var type in types)
-            _types[type.Name] = type;
+            _types[type.FullName!] = type;
     }
 }

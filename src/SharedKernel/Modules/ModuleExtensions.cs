@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+using System.Reflection;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +16,75 @@ public static class ModuleExtensions
 {
     private static bool _sharedServicesRegistered;
 
+    public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)
+    {
+        if (configuration is null)
+        {
+            return services;
+        }
+
+        var modulesSection = configuration.GetSection("Modules");
+        if (!modulesSection.Exists())
+            return services;
+
+        foreach (var moduleSection in modulesSection.GetChildren())
+        {
+            var moduleName = moduleSection.Key;
+            if (string.IsNullOrWhiteSpace(moduleName))
+                continue;
+
+            var assemblyName = string.Concat(moduleName, ".Module");
+
+            // Try to find a loaded assembly first, then attempt to load by name
+            var assembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));
+
+            if (assembly is null)
+            {
+                try
+                {
+                    assembly = Assembly.Load(new AssemblyName(assemblyName));
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            Type? moduleType = null;
+            try
+            {
+                moduleType = assembly.GetTypes()
+                    .FirstOrDefault(t => typeof(IModule).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (moduleType is null)
+                continue;
+
+            // Invoke AddModule<TModule>(IServiceCollection, IConfiguration) via reflection,
+            // passing the module-specific IConfigurationSection
+            var addModuleMethod = typeof(ModuleExtensions).GetMethod(nameof(AddModule), BindingFlags.Public | BindingFlags.Static);
+            if (addModuleMethod is null)
+                continue;
+
+            var generic = addModuleMethod.MakeGenericMethod(moduleType);
+            try
+            {
+                generic.Invoke(null, new object[] { services, moduleSection });
+            }
+            catch
+            {
+                // ignore invocation errors and continue
+            }
+        }
+
+        return services;
+    }
+
     /// <summary>
     /// Registra os serviços de um módulo no container de DI.
     /// Também registra um documento OpenAPI exclusivo para o módulo.
@@ -27,9 +99,11 @@ public static class ModuleExtensions
         {
             services.AddHttpContextAccessor();
             services.AddScoped<IRequestContext, RequestContext>();
-            services.AddTransient<OutboxConfiguration>();
             _sharedServicesRegistered = true;
         }
+        
+        // Registra a configuração do Outbox do módulo para injeção, se necessário
+        services.AddTransient<OutboxConfiguration<TModule>>();
 
         // Garante que o tracker esteja registrado como singleton
         var tracker = services

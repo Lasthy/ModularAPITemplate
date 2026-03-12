@@ -16,4 +16,6 @@ public class OutboxMessage
     public DateTime? NextRetryAt { get; set; }
     public int Partition { get; set; }
     public string? Error { get; set; }
+    public UserIdType? ActorId { get; set; }
+    public byte[] RowVersion { get; set; } = default!;
 }

@@ -7,18 +7,20 @@ using Microsoft.Extensions.Logging;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
 using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
+using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Workers;
 
-public class OutboxWorker<TContext> : BaseWorker
+public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
     where TContext : IBaseDbContext
+    where TModule : IModule
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<OutboxWorker<TContext>> _logger;
+    private readonly ILogger<OutboxProcessingWorker<TModule, TContext>> _logger;
     private readonly IPublisher _publisher;
-    private readonly OutboxConfiguration _configuration;
+    private readonly OutboxConfiguration<TModule> _configuration;
 
-    public OutboxWorker(IServiceScopeFactory serviceScopeFactory, ILogger<OutboxWorker<TContext>> logger, IPublisher publisher, OutboxConfiguration configuration)
+    public OutboxProcessingWorker(IServiceScopeFactory serviceScopeFactory, ILogger<OutboxProcessingWorker<TModule, TContext>> logger, IPublisher publisher, OutboxConfiguration<TModule> configuration)
         : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
     {
         _logger = logger;
@@ -35,7 +37,7 @@ public class OutboxWorker<TContext> : BaseWorker
 
         if (!enabled)
         {
-            _logger.LogInformation("OutboxWorker is disabled. Stopping execution.");
+            _logger.LogInformation("OutboxProcessingWorker is disabled. Stopping execution.");
 
             RequestCancellation();
             return;
@@ -43,22 +45,18 @@ public class OutboxWorker<TContext> : BaseWorker
 
         var context = services.GetRequiredService<TContext>();
 
-        var partitionStart = _configuration.PartitionStart;
-        var partitionEnd = _configuration.PartitionEnd;
-        var batchSize = _configuration.BatchSize;
+        var partitions = _configuration.GetPartitions();
 
-        var partitions = Enumerable.Range(partitionStart, partitionEnd - partitionStart + 1).ToArray();
+        var messages = await ClaimMessages(context, partitions, _configuration.BatchSize);
 
-        var messages = await ClaimMessages(context, partitions, batchSize);
-
-        if(messages.Count == 0)
+        if(messages.Length == 0)
             return;
 
         await Parallel.ForEachAsync(
             messages,
             new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount - 1
+                MaxDegreeOfParallelism = Environment.ProcessorCount > 1 ? Environment.ProcessorCount - 1 : 1
             },
             async (message, ct) =>
             {
@@ -67,24 +65,40 @@ public class OutboxWorker<TContext> : BaseWorker
         );
     }
 
-    private async Task<List<OutboxMessage>> ClaimMessages(IBaseDbContext db, int[] partitions, int batchSize)
+    private async Task<OutboxMessage[]> ClaimMessages(IBaseDbContext db, int[] partitions, int batchSize)
     {
-        var now = DateTime.UtcNow;
+        var messages = Array.Empty<OutboxMessage>();
 
-        var messages = await db.OutboxMessages
-            .Where(x =>
-                partitions.Contains(x.Partition) &&
-                x.ProcessedAt == null &&
-                x.ProcessingAt == null &&
-                (x.NextRetryAt == null || x.NextRetryAt <= now))
-            .OrderBy(x => x.OccurredAt)
-            .Take(batchSize)
-            .ToListAsync();
+        var success = false;
 
-        foreach (var msg in messages)
-            msg.ProcessingAt = now;
+        while(!success)
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
 
-        await db.SaveChangesAsync();
+                messages = await db.OutboxMessages
+                    .Where(x =>
+                        partitions.Contains(x.Partition) &&
+                        x.ProcessedAt == null &&
+                        x.ProcessingAt == null &&
+                        (x.NextRetryAt == null || x.NextRetryAt <= now))
+                    .OrderBy(x => x.OccurredAt)
+                    .Take(batchSize)
+                    .ToArrayAsync();
+                
+                foreach (var msg in messages)
+                    msg.ProcessingAt = now;
+
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _logger.LogWarning("Concurrency conflict while claiming outbox messages. Retrying...");
+
+                await Task.Delay(Random.Shared.Next(1, 50));
+            }
+        }
 
         return messages;
     }
@@ -119,7 +133,6 @@ public class OutboxWorker<TContext> : BaseWorker
         var msg = await db.OutboxMessages.FindAsync(id);
 
         msg!.ProcessedAt = DateTime.UtcNow;
-        msg.ProcessingAt = null;
 
         await db.SaveChangesAsync();
     }
@@ -135,10 +148,9 @@ public class OutboxWorker<TContext> : BaseWorker
 
         msg!.RetryCount++;
 
-        var delaySeconds = Math.Pow(2, msg.RetryCount);
+        var delayMilliseconds = Math.Pow(2, Math.Max(msg.RetryCount, 5)) * _configuration.IntervalMilliseconds + 50; // just a tiny bit to ensure the next retry is after the base interval
 
-        msg.NextRetryAt = DateTime.UtcNow.AddSeconds(delaySeconds);
-        msg.ProcessingAt = null;
+        msg.NextRetryAt = DateTime.UtcNow.AddMilliseconds(delayMilliseconds);
         msg.Error = ex.ToString();
 
         await db.SaveChangesAsync();

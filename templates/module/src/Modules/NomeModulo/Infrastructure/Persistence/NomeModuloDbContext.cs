@@ -20,6 +20,7 @@ public sealed class NomeModuloDbContext(
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplySoftDeleteQueryFilter();
+        modelBuilder.ConfigureOutboxMessage();
         modelBuilder.HasDefaultSchema("nomemodulo_schema");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(NomeModuloDbContext).Assembly);
     }

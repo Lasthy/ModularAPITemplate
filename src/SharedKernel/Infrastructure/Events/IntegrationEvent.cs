@@ -7,8 +7,9 @@ namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 /// Eventos de integração são publicados após a persistência e servem
 /// para comunicação assíncrona entre módulos/serviços.
 /// </summary>
-public interface IIntegrationEvent : INotification
+public record IntegrationEvent : INotification
 {
-    Ulid EventId { get; }
-    DateTime OccurredAt { get; }
+    public Ulid EventId { get; } = Ulid.NewUlid();
+    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    public UserIdType? ActorId { get; init; }
 }

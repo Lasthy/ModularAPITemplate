@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Cysharp.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ModularAPITemplate.SharedKernel.Domain.Components;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
@@ -12,6 +13,26 @@ public static class BaseDbExtensions
         configurationBuilder
             .Properties<Ulid>()
             .HaveConversion<UlidToBytesConverter>();
+    }
+
+    public static void ConfigureOutboxMessage(this ModelBuilder builder)
+    {
+        builder.Entity<OutboxMessage>(entity =>
+        {
+            entity.Property(x => x.RowVersion).IsRowVersion();
+
+            entity.HasIndex(x => new
+            {
+                x.Partition,
+                x.ProcessedAt,
+                x.ProcessingAt,
+                x.NextRetryAt,
+                x.OccurredAt
+            })
+            .HasDatabaseName("IX_Outbox_Partition_Dispatch");
+
+            
+        });
     }
 
     public static void ApplySoftDeleteQueryFilter(this ModelBuilder modelBuilder)

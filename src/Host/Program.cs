@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IEventBus, InProcessEventBus>();
 
 // ----- Registro de módulos -----
+builder.Services.AddModules(builder.Configuration);
 
 var app = builder.Build();
 
