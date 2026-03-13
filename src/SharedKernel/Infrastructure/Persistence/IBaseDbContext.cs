@@ -1,5 +1,4 @@
 using Cysharp.EntityFrameworkCore;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ModularAPITemplate.SharedKernel.Domain;
 

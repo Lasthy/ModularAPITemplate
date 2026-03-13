@@ -1,8 +1,7 @@
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 
-public abstract record IntegrationEvent : IEvent
+public abstract record DomainEvent : IEvent
 {
-    public Ulid EventId { get; } = Ulid.NewUlid();
     public DateTime OccurredAt { get; } = DateTime.UtcNow;
     public UserIdType? ActorId { get; init; }
 }

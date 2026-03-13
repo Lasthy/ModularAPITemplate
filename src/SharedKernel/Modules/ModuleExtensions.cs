@@ -9,6 +9,7 @@ using ModularAPITemplate.SharedKernel.Application.Context;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
 using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
+using ModularAPITemplate.SharedKernel.Infrastructure.Requests;
 
 namespace ModularAPITemplate.SharedKernel.Modules;
 
@@ -109,6 +110,7 @@ public static class ModuleExtensions
             services.AddHttpContextAccessor();
             services.AddScoped<IRequestContext, RequestContext>();
             services.AddScoped<AuditSaveChangesInterceptor>();
+            services.AddTransient<IDispatcher, Dispatcher>();
             _sharedServicesRegistered = true;
         }
         

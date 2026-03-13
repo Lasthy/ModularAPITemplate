@@ -39,10 +39,6 @@ public sealed class NomeModuloModule : IModule
         services.AddScoped<IIntegrationEventPublisher<NomeModuloDbContext>, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
 
         EventTypeRegistry.RegisterFromAssembly(typeof(NomeModuloModule).Assembly);
-
-        // MediatR handlers do módulo
-        services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(NomeModuloModule).Assembly));
     }
 
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,14 +16,12 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OutboxProcessingWorker<TModule, TContext>> _logger;
-    private readonly IPublisher _publisher;
     private readonly OutboxConfiguration<TModule> _configuration;
 
-    public OutboxProcessingWorker(IServiceScopeFactory serviceScopeFactory, ILogger<OutboxProcessingWorker<TModule, TContext>> logger, IPublisher publisher, OutboxConfiguration<TModule> configuration)
+    public OutboxProcessingWorker(IServiceScopeFactory serviceScopeFactory, ILogger<OutboxProcessingWorker<TModule, TContext>> logger, OutboxConfiguration<TModule> configuration)
         : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
     {
         _logger = logger;
-        _publisher = publisher;
         _scopeFactory = serviceScopeFactory;
         _configuration = configuration;
 
@@ -60,7 +57,9 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
             },
             async (message, ct) =>
             {
-                await ProcessMessage(message, ct);
+                var services = _scopeFactory.CreateScope().ServiceProvider;
+
+                await ProcessMessage(message, ct, services);
             }
         );
     }
@@ -103,18 +102,32 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
         return messages;
     }
 
-    private async Task ProcessMessage(OutboxMessage message, CancellationToken ct)
+    private async Task ProcessMessage(OutboxMessage message, CancellationToken ct, IServiceProvider services)
     {
         try
         {
             var type = EventTypeRegistry.Resolve(message.Type);
 
-            var notification = JsonSerializer.Deserialize(
+            var @event = JsonSerializer.Deserialize(
                 message.Content,
                 type
-            ) as INotification;
+            ) as IEvent;
 
-            await _publisher.Publish(notification!, ct);
+            var handlerType = typeof(IEventHandler<>).MakeGenericType(type);
+
+            var handlers = services.GetServices(handlerType);
+
+            foreach (var handler in handlers)
+            {
+                var method = handlerType.GetMethod("HandleAsync");
+
+                if (method == null)
+                    continue;
+
+                var task = (Task)method.Invoke(handler, new object[] { @event!, ct })!;
+
+                await task;
+            }
 
             await MarkProcessed(message.Id);
         }

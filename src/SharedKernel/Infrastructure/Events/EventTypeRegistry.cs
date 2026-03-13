@@ -1,5 +1,4 @@
 using System.Reflection;
-using MediatR;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 
@@ -7,7 +6,7 @@ public static class EventTypeRegistry
 {
     private static readonly Dictionary<string, Type> _types = new();
 
-    public static void Register<T>() where T : INotification
+    public static void Register<T>() where T : IEvent
     {
         var type = typeof(T);
         _types[type.FullName!] = type;
@@ -26,7 +25,7 @@ public static class EventTypeRegistry
         var types = assembly
             .GetTypes()
             .Where(t =>
-                typeof(INotification).IsAssignableFrom(t) &&
+                typeof(IEvent).IsAssignableFrom(t) &&
                 !t.IsAbstract &&
                 !t.IsInterface);
 
