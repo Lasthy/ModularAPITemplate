@@ -6,6 +6,6 @@ namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 /// </summary>
 public interface IEventBus
 {
-    Task PublishAsync<T>(T integrationEvent, CancellationToken cancellationToken = default)
-        where T : IntegrationEvent;
+    Task PublishAsync<T>(T @event, CancellationToken cancellationToken = default)
+        where T : IEvent;
 }

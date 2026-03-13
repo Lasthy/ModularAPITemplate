@@ -5,7 +5,7 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ----- Infraestrutura compartilhada -----
-builder.Services.AddSingleton<IEventBus, InProcessEventBus>();
+
 
 // ----- Registro de módulos -----
 builder.Services.AddModules(builder.Configuration);

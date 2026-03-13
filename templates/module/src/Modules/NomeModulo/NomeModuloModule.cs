@@ -23,7 +23,7 @@ public sealed class NomeModuloModule : IModule
         services.AddDbContext<NomeModuloDbContext>((sp, options) =>
         {
             options.UseSqlServer(
-                configuration[$"Modules:{ModuleName}:ConnectionString"],
+                configuration[$"ConnectionString"],
                 sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "nomemodulo_schema"));
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
@@ -34,6 +34,8 @@ public sealed class NomeModuloModule : IModule
         services.AddHostedService<OutboxCleanupWorker<NomeModuloModule, NomeModuloDbContext>>();
 
         // Services
+        services.AddSingleton<IEventBus, InProcessEventBus<NomeModuloDbContext>>();
+
         services.AddScoped<IIntegrationEventPublisher<NomeModuloDbContext>, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
 
         EventTypeRegistry.RegisterFromAssembly(typeof(NomeModuloModule).Assembly);

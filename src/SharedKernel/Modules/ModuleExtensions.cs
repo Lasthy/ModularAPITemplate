@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModularAPITemplate.SharedKernel.Application.Context;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
+using ModularAPITemplate.SharedKernel.Infrastructure.Events;
 using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 
 namespace ModularAPITemplate.SharedKernel.Modules;
@@ -142,7 +143,34 @@ public static class ModuleExtensions
         });
 
         TModule.RegisterServices(services, configuration);
+
+        RegisterEventHandlers(services, typeof(TModule).Assembly);
+        
         return services;
+    }
+
+    /// <summary>
+    /// Escaneia o assembly procurando por implementações de IEventHandler e as registra no container de DI.
+    /// </summary>
+    private static void RegisterEventHandlers(IServiceCollection services, Assembly assembly)
+    {
+        var handlerInterface = typeof(IEventHandler<>);
+        var implementations = assembly.GetTypes()
+            .Where(t => !t.IsAbstract && !t.IsInterface &&
+                       t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == handlerInterface))
+            .ToList();
+
+        foreach (var implementation in implementations)
+        {
+            var interfaces = implementation.GetInterfaces()
+                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == handlerInterface)
+                .ToList();
+
+            foreach (var @interface in interfaces)
+            {
+                services.AddScoped(@interface, implementation);
+            }
+        }
     }
 
     /// <summary>
