@@ -147,6 +147,7 @@ public static class ModuleExtensions
         TModule.RegisterServices(services, configuration);
 
         RegisterEventHandlers(services, typeof(TModule).Assembly);
+        RegisterRequestHandlers(services, typeof(TModule).Assembly);
         
         return services;
     }
@@ -166,6 +167,29 @@ public static class ModuleExtensions
         {
             var interfaces = implementation.GetInterfaces()
                 .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == handlerInterface)
+                .ToList();
+
+            foreach (var @interface in interfaces)
+            {
+                services.AddScoped(@interface, implementation);
+            }
+        }
+    }
+
+    private static void RegisterRequestHandlers(IServiceCollection services, Assembly assembly)
+    {
+        var implementations = assembly.GetTypes()
+            .Where(t => !t.IsAbstract && !t.IsInterface &&
+                       t.GetInterfaces().Any(
+                            i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<>)
+                            || i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)))
+            .ToList();
+
+        foreach (var implementation in implementations)
+        {
+            var interfaces = implementation.GetInterfaces()
+                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<>)
+                            || i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>))
                 .ToList();
 
             foreach (var @interface in interfaces)
