@@ -57,9 +57,9 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
             },
             async (message, ct) =>
             {
-                var services = _scopeFactory.CreateScope().ServiceProvider;
+                await using var services = _scopeFactory.CreateAsyncScope();
 
-                await ProcessMessage(message, ct, services);
+                await ProcessMessage(message, ct, services.ServiceProvider);
             }
         );
     }
@@ -139,7 +139,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
 
     private async Task MarkProcessed(Ulid id)
     {
-        using var scope = _scopeFactory.CreateScope();
+        await using var scope = _scopeFactory.CreateAsyncScope();
 
         var db = scope.ServiceProvider.GetRequiredService<IBaseDbContext>();
 
@@ -154,7 +154,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
     {
         _logger.LogError(ex, "Failed to process outbox message with id {MessageId}", message.Id);
 
-        using var scope = _scopeFactory.CreateScope();
+        await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<IBaseDbContext>();
 
         var msg = await db.OutboxMessages.FindAsync(message.Id);
