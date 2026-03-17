@@ -1,5 +1,8 @@
 #pragma warning disable
 using System.Runtime.CompilerServices;
+// Copyright (c) 2019 Cysharp, Inc.
+// Licensed under the MIT license. See ThirdPartyLicenses/Cysharp.Ulid/LICENSE.txt
+
 using System.Security.Cryptography;
 
 namespace System

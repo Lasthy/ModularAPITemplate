@@ -1,3 +1,6 @@
+// Copyright (c) 2019 Cysharp, Inc.
+// Licensed under the MIT license. See ThirdPartyLicenses/Cysharp.Ulid/LICENSE.txt
+
 #pragma warning disable //CS0162, CS1574, CS9191, CS9195 yeah, I don't want any warnings at all
 
 using System.Buffers;

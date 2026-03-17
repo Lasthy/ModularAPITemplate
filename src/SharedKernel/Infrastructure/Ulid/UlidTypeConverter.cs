@@ -1,3 +1,6 @@
+// Copyright (c) 2019 Cysharp, Inc.
+// Licensed under the MIT license. See ThirdPartyLicenses/Cysharp.Ulid/LICENSE.txt
+
 #pragma warning disable
 using System.ComponentModel;
 using System.Globalization;
