@@ -11,7 +11,7 @@ using ModularAPITemplate.SharedKernel.Modules;
 namespace ModularAPITemplate.Modules.NomeModulo;
 
 /// <summary>
-/// Módulo NomeModulo — ponto de entrada para registro de serviços e endpoints.
+/// NomeModulo module — entry point for registering services and endpoints.
 /// </summary>
 public sealed class NomeModuloModule : IModule
 {
@@ -35,15 +35,15 @@ public sealed class NomeModuloModule : IModule
 
         // Services
         services.AddSingleton<IEventBus, InProcessEventBus<NomeModuloDbContext>>();
-
         services.AddScoped<IIntegrationEventPublisher<NomeModuloDbContext>, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
 
+        // Register events for the outbox processing pipeline.
         EventTypeRegistry.RegisterFromAssembly(typeof(NomeModuloModule).Assembly);
     }
 
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        // TODO: Mapear endpoints
-        // ExemploEndpoints.Map(endpoints);
+        // TODO: Map module endpoints.
+        // ExampleEndpoints.Map(endpoints);
     }
 }
