@@ -10,6 +10,9 @@ using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Workers;
 
+/// <summary>
+/// Periodically scans for outbox messages that were claimed but not processed and reclaims them.
+/// </summary>
 public class OutboxRecoveryWorker<TModule, TContext> : BaseWorker
     where TContext : IBaseDbContext
     where TModule : IModule
@@ -28,6 +31,9 @@ public class OutboxRecoveryWorker<TModule, TContext> : BaseWorker
         Interval = TimeSpan.FromSeconds(_configuration.RecoveryThresholdSeconds);
     }
 
+    /// <summary>
+    /// Background job that reclaims outbox messages that have been stuck in processing for longer than the recovery threshold.
+    /// </summary>
     protected override async Task ExecuteJobAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var db = services.GetRequiredService<TContext>();

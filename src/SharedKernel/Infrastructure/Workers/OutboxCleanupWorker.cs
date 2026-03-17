@@ -10,6 +10,9 @@ using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Workers;
 
+/// <summary>
+/// Cleans up old processed outbox messages from the database.
+/// </summary>
 public class OutboxCleanupWorker<TModule, TContext> : BaseWorker
     where TContext : IBaseDbContext
     where TModule : IModule
@@ -28,6 +31,9 @@ public class OutboxCleanupWorker<TModule, TContext> : BaseWorker
         Interval = TimeSpan.FromSeconds(_configuration.RecoveryThresholdSeconds);
     }
 
+    /// <summary>
+    /// Background job that removes processed outbox messages older than the configured cleanup threshold.
+    /// </summary>
     protected override async Task ExecuteJobAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var db = services.GetRequiredService<TContext>();

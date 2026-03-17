@@ -5,8 +5,8 @@ using Microsoft.Extensions.Logging;
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Workers;
 
 /// <summary>
-/// Worker base com logging e tratamento de erro padronizado.
-/// Módulos podem criar workers herdando desta classe.
+/// Base background worker with standardized logging and error handling.
+/// Modules can create workers by inheriting from this class.
 /// </summary>
 public abstract class BaseWorker(
     IServiceScopeFactory scopeFactory,
@@ -39,13 +39,16 @@ public abstract class BaseWorker(
         logger.LogInformation("Worker {WorkerName} stopped.", workerName);
     }
 
+    /// <summary>
+    /// Requests the worker to stop after the current iteration.
+    /// </summary>
     protected void RequestCancellation()
     {
         _cancellationRequested = true;
     }
 
     /// <summary>
-    /// Implementação do trabalho do worker. Chamado a cada intervalo.
+    /// Executes the work for each interval.
     /// </summary>
     protected abstract Task ExecuteJobAsync(IServiceProvider services, CancellationToken cancellationToken);
 }

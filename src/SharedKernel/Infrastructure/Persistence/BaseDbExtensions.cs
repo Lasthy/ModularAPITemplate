@@ -6,8 +6,14 @@ using ModularAPITemplate.SharedKernel.Domain.Components;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 
+/// <summary>
+/// Extensions for configuring EF Core conventions and shared kernel entities.
+/// </summary>
 public static class BaseDbExtensions
 {
+    /// <summary>
+    /// Configures shared kernel conventions (e.g. Ulid conversion) for the EF Core model builder.
+    /// </summary>
     public static void ConfigureSharedKernelConventions(this ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder
@@ -15,6 +21,9 @@ public static class BaseDbExtensions
             .HaveConversion<UlidToBytesConverter>();
     }
 
+    /// <summary>
+    /// Configures the OutboxMessage entity (indexes, concurrency token, etc.).
+    /// </summary>
     public static void ConfigureOutboxMessage(this ModelBuilder builder)
     {
         builder.Entity<OutboxMessage>(entity =>
@@ -30,11 +39,12 @@ public static class BaseDbExtensions
                 x.OccurredAt
             })
             .HasDatabaseName("IX_Outbox_Partition_Dispatch");
-
-            
         });
     }
 
+    /// <summary>
+    /// Applies a global query filter to exclude soft-deleted entities.
+    /// </summary>
     public static void ApplySoftDeleteQueryFilter(this ModelBuilder modelBuilder)
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

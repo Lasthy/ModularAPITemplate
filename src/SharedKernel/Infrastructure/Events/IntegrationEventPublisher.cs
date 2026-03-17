@@ -5,6 +5,11 @@ using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 
+/// <summary>
+/// Publishes integration events by persisting them into the outbox table.
+/// </summary>
+/// <typeparam name="TModule">Module type whose configuration is used.</typeparam>
+/// <typeparam name="TContext">Database context type.</typeparam>
 public class IntegrationEventPublisher<TModule, TContext> : IIntegrationEventPublisher<TContext>
      where TContext : IBaseDbContext
      where TModule : IModule
@@ -18,6 +23,9 @@ public class IntegrationEventPublisher<TModule, TContext> : IIntegrationEventPub
         _config = config;
     }
 
+    /// <summary>
+    /// Creates a new outbox entry for the event and saves it to the database.
+    /// </summary>
     public async Task PublishAsync(IntegrationEvent message, CancellationToken ct = default)
     {
         var outbox = new OutboxMessage

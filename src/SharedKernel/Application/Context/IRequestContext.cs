@@ -1,52 +1,52 @@
 namespace ModularAPITemplate.SharedKernel.Application.Context;
 
 /// <summary>
-/// Contexto da requisição HTTP atual.
-/// Fornece informações de autenticação e claims do usuário logado.
-/// Pode ser injetado em handlers, use cases e serviços.
+/// Context of the current HTTP request.
+/// Provides authentication information and user claims.
+/// Can be injected into handlers, use cases, and services.
 /// </summary>
 public interface IRequestContext
 {
     /// <summary>
-    /// Identificador do usuário autenticado (claim "sub" ou "nameidentifier").
-    /// Null se não autenticado.
+    /// Authenticated user identifier ("sub" or "nameidentifier" claim).
+    /// Null if not authenticated.
     /// </summary>
     UserIdType? UserId { get; }
 
     /// <summary>
-    /// Nome do usuário autenticado.
+    /// Authenticated user name.
     /// </summary>
     string? UserName { get; }
 
     /// <summary>
-    /// Indica se a requisição possui um usuário autenticado.
+    /// Indicates whether the request has an authenticated user.
     /// </summary>
     bool IsAuthenticated { get; }
 
     /// <summary>
-    /// Roles do usuário autenticado.
+    /// Authenticated user's roles.
     /// </summary>
     IReadOnlyList<string> Roles { get; }
 
     /// <summary>
-    /// Todas as claims do usuário como dicionário (tipo → valor).
-    /// Claims com múltiplos valores terão apenas o primeiro valor.
-    /// Use <see cref="GetClaimValues"/> para obter todos os valores.
+    /// All user claims as a dictionary (type → value).
+    /// Claims with multiple values will return only the first value.
+    /// Use <see cref="GetClaimValues"/> to get all values for a given claim type.
     /// </summary>
     IReadOnlyDictionary<string, string> Claims { get; }
 
     /// <summary>
-    /// Retorna o valor de uma claim específica, ou null se não existir.
+    /// Returns the value of the specified claim, or null if not present.
     /// </summary>
     string? GetClaim(string claimType);
 
     /// <summary>
-    /// Retorna todos os valores de uma claim específica.
+    /// Returns all values for the specified claim type.
     /// </summary>
     IReadOnlyList<string> GetClaimValues(string claimType);
 
     /// <summary>
-    /// Verifica se o usuário possui uma role específica.
+    /// Checks whether the user belongs to the specified role.
     /// </summary>
     bool IsInRole(string role);
 }

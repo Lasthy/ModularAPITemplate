@@ -6,6 +6,9 @@ using ModularAPITemplate.SharedKernel.Domain.Components;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 
+/// <summary>
+/// EF Core interceptor that applies audit fields (created/updated/deleted) on save.
+/// </summary>
 public class AuditSaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly IRequestContext _userContext;
@@ -15,6 +18,9 @@ public class AuditSaveChangesInterceptor : SaveChangesInterceptor
         _userContext = userContext;
     }
 
+    /// <summary>
+    /// Applies audit information (created/updated/deleted) based on the current user context.
+    /// </summary>
     private void ApplyAudit(DbContext context)
     {
         var now = DateTime.UtcNow;

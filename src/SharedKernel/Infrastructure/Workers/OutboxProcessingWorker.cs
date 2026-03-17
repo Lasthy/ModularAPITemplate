@@ -10,6 +10,9 @@ using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Workers;
 
+/// <summary>
+/// Processes pending outbox messages by deserializing and dispatching them to event handlers.
+/// </summary>
 public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
     where TContext : IBaseDbContext
     where TModule : IModule
@@ -28,6 +31,9 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
         Interval = TimeSpan.FromMilliseconds(_configuration.IntervalMilliseconds);
     }
 
+    /// <summary>
+    /// Background job that periodically claims and processes pending outbox messages.
+    /// </summary>
     protected override async Task ExecuteJobAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var enabled = _configuration.Enabled;

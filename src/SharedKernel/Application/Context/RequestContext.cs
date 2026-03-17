@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Http;
 namespace ModularAPITemplate.SharedKernel.Application.Context;
 
 /// <summary>
-/// Implementação de <see cref="IRequestContext"/> baseada no <see cref="HttpContext"/>.
-/// Extrai informações de autenticação e claims do usuário da requisição HTTP atual.
-/// Registrado como Scoped no container de DI.
+/// <see cref="IRequestContext"/> implementation based on <see cref="HttpContext"/>.
+/// Extracts authentication information and claims from the current HTTP request.
+/// Registered as scoped in the DI container.
 /// </summary>
 public class RequestContext : IRequestContext
 {
@@ -20,8 +20,8 @@ public class RequestContext : IRequestContext
     }
 
     /// <summary>
-    /// Construtor protegido para permitir que módulos criem contextos derivados
-    /// sem depender de <see cref="IHttpContextAccessor"/>.
+    /// Protected constructor to allow modules to create derived contexts
+    /// without depending on <see cref="IHttpContextAccessor"/>.
     /// </summary>
     protected RequestContext(ClaimsPrincipal? user)
     {

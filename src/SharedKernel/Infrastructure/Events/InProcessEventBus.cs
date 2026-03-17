@@ -5,9 +5,9 @@ using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 
 /// <summary>
-/// Implementação in-process do barramento de eventos.
-/// Resolve e executa todos os handlers registrados para cada evento.
-/// Pode ser substituída por uma implementação externa (RabbitMQ, Kafka, etc).
+/// Default in-process implementation of <see cref="IEventBus"/>.
+/// Resolves and executes all registered <see cref="IEventHandler{T}"/> instances for each event.
+/// Can be replaced with a broker-based implementation (RabbitMQ, Kafka, etc.).
 /// </summary>
 public sealed class InProcessEventBus<TContext>
 (
@@ -15,15 +15,19 @@ public sealed class InProcessEventBus<TContext>
     ILogger<InProcessEventBus<TContext>> logger) : IEventBus
 where TContext : IBaseDbContext
 {
+    /// <summary>
+    /// Publishes an event instance to all subscribed handlers.
+    /// If the event is an <see cref="IntegrationEvent"/>, it is forwarded to an <see cref="IIntegrationEventPublisher{TContext}"/>.
+    /// </summary>
     public async Task PublishAsync<T>(T @event, CancellationToken cancellationToken = default)
         where T : IEvent
     {
-        if(@event is IntegrationEvent integrationEvent)
+        if (@event is IntegrationEvent integrationEvent)
         {
             var integrationEventPublisher = serviceProvider.GetRequiredService<IIntegrationEventPublisher<TContext>>();
 
             logger.LogInformation(
-            "Publishing integration event {EventType} (Id: {EventId})",
+                "Publishing integration event {EventType} (Id: {EventId})",
                 @integrationEvent.GetType().Name,
                 @integrationEvent.EventId);
 
@@ -32,6 +36,7 @@ where TContext : IBaseDbContext
             return;
         }
 
+        // Resolve all handlers registered for this event type.
         var handlers = serviceProvider.GetServices<IEventHandler<T>>();
 
         foreach (var handler in handlers)

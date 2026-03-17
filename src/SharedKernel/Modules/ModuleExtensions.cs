@@ -14,7 +14,7 @@ using ModularAPITemplate.SharedKernel.Infrastructure.Requests;
 namespace ModularAPITemplate.SharedKernel.Modules;
 
 /// <summary>
-/// Métodos de extensão para registro simplificado de módulos no Host.
+/// Extension methods to simplify module registration in the Host application.
 /// </summary>
 public static class ModuleExtensions
 {
@@ -22,6 +22,12 @@ public static class ModuleExtensions
 
     private record ModuleAssemblyLoading { };
 
+    /// <summary>
+    /// Loads and registers modules defined in the <c>Modules</c> configuration section.
+    /// </summary>
+    /// <param name="services">DI service collection.</param>
+    /// <param name="configuration">Application configuration.</param>
+    /// <returns>Updated service collection.</returns>
     public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)
     {
         if (configuration is null)
@@ -65,9 +71,9 @@ public static class ModuleExtensions
                 moduleType = assembly.GetTypes()
                     .FirstOrDefault(t => typeof(IModule).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                logger.LogError(ex, "Error occurred while trying to get module type from assembly {AssemblyName}", assemblyName);   
+                logger.LogError(ex, "Error occurred while trying to get module type from assembly {AssemblyName}", assemblyName);
 
                 continue;
             }
@@ -86,7 +92,7 @@ public static class ModuleExtensions
             {
                 generic.Invoke(null, new object[] { services, moduleSection });
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.LogError(ex, "Error occurred while trying to add module {ModuleName}", moduleName);
             }
@@ -96,15 +102,18 @@ public static class ModuleExtensions
     }
 
     /// <summary>
-    /// Registra os serviços de um módulo no container de DI.
-    /// Também registra um documento OpenAPI exclusivo para o módulo.
+    /// Registers a specific module into the DI container and configures its OpenAPI document.
     /// </summary>
+    /// <typeparam name="TModule">Module type.</typeparam>
+    /// <param name="services">DI service collection.</param>
+    /// <param name="configuration">Module configuration section.</param>
+    /// <returns>Updated service collection.</returns>
     public static IServiceCollection AddModule<TModule>(
         this IServiceCollection services,
         IConfiguration configuration)
         where TModule : IModule
     {
-        // Registra serviços compartilhados apenas uma vez
+        // Register shared services only once
         if (!_sharedServicesRegistered)
         {
             services.AddHttpContextAccessor();
@@ -113,11 +122,11 @@ public static class ModuleExtensions
             services.AddTransient<IDispatcher, Dispatcher>();
             _sharedServicesRegistered = true;
         }
-        
-        // Registra a configuração do Outbox do módulo para injeção, se necessário
+
+        // Register module-specific Outbox configuration for DI consumption
         services.AddTransient<OutboxConfiguration<TModule>>();
 
-        // Garante que o tracker esteja registrado como singleton
+        // Ensure a tracker is available (singleton) for collecting OpenAPI doc names
         var tracker = services
             .BuildServiceProvider()
             .GetService<OpenApiModuleTracker>();
@@ -128,7 +137,7 @@ public static class ModuleExtensions
             services.AddSingleton(tracker);
         }
 
-        // Registra o documento OpenAPI do módulo
+        // Register the module's OpenAPI document name for the host to discover
         var moduleName = TModule.ModuleName;
         tracker.Add(moduleName);
 
@@ -144,16 +153,18 @@ public static class ModuleExtensions
                 || string.Equals(description.GroupName, moduleName, StringComparison.OrdinalIgnoreCase);
         });
 
+        // Let the module register its own services
         TModule.RegisterServices(services, configuration);
 
+        // Scan the module assembly for handlers and register them
         RegisterEventHandlers(services, typeof(TModule).Assembly);
         RegisterRequestHandlers(services, typeof(TModule).Assembly);
-        
+
         return services;
     }
 
     /// <summary>
-    /// Escaneia o assembly procurando por implementações de IEventHandler e as registra no container de DI.
+    /// Scans the given assembly and registers all implementations of <see cref="IEventHandler{T}"/>.
     /// </summary>
     private static void RegisterEventHandlers(IServiceCollection services, Assembly assembly)
     {
@@ -176,6 +187,9 @@ public static class ModuleExtensions
         }
     }
 
+    /// <summary>
+    /// Scans the given assembly and registers all implementations of <see cref="IRequestHandler{TRequest}"/> and <see cref="IRequestHandler{TRequest,TResponse}"/>.
+    /// </summary>
     private static void RegisterRequestHandlers(IServiceCollection services, Assembly assembly)
     {
         var implementations = assembly.GetTypes()
@@ -200,8 +214,11 @@ public static class ModuleExtensions
     }
 
     /// <summary>
-    /// Mapeia os endpoints de um módulo no pipeline HTTP.
+    /// Invokes the module's endpoint configuration on the provided <see cref="IEndpointRouteBuilder"/>.
     /// </summary>
+    /// <typeparam name="TModule">Type of the module.</typeparam>
+    /// <param name="endpoints">Endpoint builder.</param>
+    /// <returns>The same endpoint builder for fluent chaining.</returns>
     public static IEndpointRouteBuilder MapModuleEndpoints<TModule>(
         this IEndpointRouteBuilder endpoints)
         where TModule : IModule

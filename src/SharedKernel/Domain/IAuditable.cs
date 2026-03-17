@@ -1,6 +1,9 @@
 
 namespace ModularAPITemplate.SharedKernel.Domain.Components;
 
+/// <summary>
+/// Marks an entity as auditable with creation and update tracking.
+/// </summary>
 public interface IAuditable
 {
     DateTime CreatedAt { get; set; }
