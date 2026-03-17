@@ -1,13 +1,12 @@
-TODO: update this to match the new updated architecture and features.
-TODO: update the module template later.
-
 # Architecture — ModularAPITemplate
 
 > **This is the source of truth.** A Portuguese version is available at [.ARCHITECTURE.pt-BR.md](.ARCHITECTURE.pt-BR.md).
 
 ## Overview
 
-ModularAPITemplate is a template for building modular Web APIs in .NET 10. Each domain/module is self-contained and responsible for its own business rules, persistence, and endpoints, while shared infrastructure is centralized in the **SharedKernel**.
+ModularAPITemplate is a template for building modular Web APIs on .NET 10.
+Each module is self-contained (business rules, persistence, endpoints) and communicates with other modules via integration events.
+Shared infrastructure (events, request pipeline, outbox, logging helpers, etc.) lives in the **SharedKernel**.
 
 ## Project Structure
 
@@ -16,11 +15,11 @@ src/
 ├── Host/                                  → Web project (entry point)
 ├── SharedKernel/                          → Shared abstractions and infrastructure
 └── Modules/
-    └── <ModuleName>/  → Domain module (csproj at folder root)
+    └── <ModuleName>/                      → Domain module (csproj at folder root)
 
 tests/
 └── Modules/
-    └── <ModuleName>/  → Module tests (csproj at folder root)
+    └── <ModuleName>/                      → Module tests (csproj at folder root)
 ```
 
 ## Module Layers
@@ -36,143 +35,159 @@ ModularAPITemplate.Modules.<ModuleName>/
 │   ├── DTOs/           → Data Transfer Objects and mappings
 │   └── UseCases/       → Use cases (Commands/Queries + Handlers via MediatR)
 ├── Infrastructure/
-│   └── Persistence/    → DbContext and EF configurations
-├── Endpoints/          → Minimal API endpoints
-└── <ModuleName>Module.cs  → DI registration and endpoints (implements IModule)
+│   └── Persistence/    → DbContext, EF configurations, outbox tables
+├── Endpoints/          → Minimal API endpoint mappings
+└── <ModuleName>Module.cs → DI registration + endpoint wiring (implements IModule)
 ```
 
-## Architecture Rules
+## Core Concepts
 
-### 1. Module Isolation
-- **Each module is self-contained**: it has its own DbContext, endpoints, and DI registrations.
-- **Modules MUST NOT reference other modules directly**. Cross-module communication must be done via **integration events** (`IEventBus`).
-- Each module defines its own database schema.
+### SharedKernel
+- Central shared abstractions and infrastructure used across all modules.
+- Contains:
+  - `IEventBus`, `IEventHandler<T>`, `DomainEvent`, `IntegrationEvent`
+  - `IRequestContext` (authenticated user context)
+  - `Result<T>` for operation results
+  - `BaseWorker`, background worker helpers
+  - Persistence helpers: `BaseDbContext`, outbox support, audit interceptors, soft-delete filters
 
-### 2. Allowed Dependencies
+### Module Isolation
+- Each module is self-contained: it owns its own DbContext, endpoints, DI registration, and schema.
+- Modules **do not reference each other directly**.
+- Cross-module communication happens only via **integration events**.
+
+### Allowed Dependencies
 ```
 Host → SharedKernel, Modules
 Module → SharedKernel (only)
 SharedKernel → NuGet packages (no module dependencies)
 ```
 
-### 3. Module Registration
-- Every module must implement `IModule` (defined in SharedKernel), including the `ModuleName` property.
-- `ModuleName` is used as the OpenAPI document identifier for the module.
-- The **Host** registers each module with:
-  ```csharp
-  builder.Services.AddModule<MyModule>(builder.Configuration);
-  app.MapModuleEndpoints<MyModule>();
+### Module Registration & OpenAPI
+- Each module implements `IModule`.
+- `ModuleName` is used as the OpenAPI document identifier.
+- The Host can register modules either explicitly or via configuration:
+  - Explicit (code):
+    ```csharp
+    builder.Services.AddModule<MyModule>(builder.Configuration);
+    app.MapModuleEndpoints<MyModule>();
+    ```
+  - Config-driven (recommended for templates):
+    ```csharp
+    builder.Services.AddModules(builder.Configuration);
+    app.MapModuleEndpoints<MyModule>(); // or map dynamically based on config
+    ```
+- When using configuration, modules are enabled by adding them to the `Modules` section
+  of `appsettings.json` (the values can be empty objects):
+  ```json
+  "Modules": {
+    "NomeModulo": {},
+    "AnotherModule": {}
+  }
   ```
-- `AddModule` automatically registers a dedicated OpenAPI document for the module.
-- This ensures the Host does not need to know the module's internal implementation.
+- `AddModule` / `AddModules`:
+  - registers shared kernel services once (request context, audit interceptor, dispatcher)
+  - registers the module's OpenAPI document automatically
+  - scans the module assembly for event/request handlers and registers them
 
-### 4. Persistence
-- Each module has its own `DbContext` inheriting from `BaseDbContext`.
-- `BaseDbContext` automatically dispatches domain events on `SaveChangesAsync`.
-- Each module must define its own **schema** in the database to avoid collisions.
-- Use cases use the module's `DbContext` directly for persistence.
-- **DO NOT** run migrations automatically. Use the EF Core CLI: `dotnet ef migrations add <Name> -p <Project> -s <Host>`.
+### Persistence
+- Every module uses its own `DbContext` (derived from `BaseDbContext`).
+- `BaseDbContext` automatically dispatches domain events before saving.
+- Shared kernel provides: soft-delete query filters, outbox persistence mapping, audit field interception.
+- Each module should set a dedicated schema to avoid collision.
+- **Migration rule:** Do NOT run migrations automatically. Use EF CLI:
+  ```bash
+  dotnet ef migrations add <Name> -p <Project> -s <Host>
+  ```
 
-### 5. Use Cases
-- Use cases are implemented as **Commands** (write) or **Queries** (read) via MediatR.
-- Each use case lives in its own directory with Command/Query + Handler.
-- They return `Result<T>` to encapsulate success/failure without exceptions.
+### Use Cases
+- Implemented as **Commands** (write) or **Queries** (read) using MediatR-style handlers.
+- Use `Result<T>` for safe success/failure flows.
 
-### 6. Domain Events
+### Domain Events
 - Entities raise domain events via `RaiseDomainEvent()`.
-- Events are automatically dispatched by `BaseDbContext` before saving.
-- Use `DomainEvent` (base record) to create typed events.
+- `BaseDbContext` dispatches domain events before saving.
+- Use `DomainEvent` to model domain-level event data.
 
-### 7. Integration Events
-- Use `IEventBus.PublishAsync()` for cross-module communication.
-- The default implementation (`InProcessEventBus`) uses MediatR in-process.
-- Can be replaced by RabbitMQ, Kafka, Azure Service Bus, etc.
+### Integration Events (Cross-module)
+- Use `IEventBus.PublishAsync()` to publish integration events.
+- Default implementation is `InProcessEventBus` (in-process handler invocation).
+- Can be swapped for external brokers (RabbitMQ/Kafka/etc).
+- Outbox pattern is used to persist integration events reliably.
 
-### 8. Cross-Module Communication
-- **Modules NEVER reference other modules directly.** All communication is done via integration events (`IEventBus`).
-- The source module raises a **domain event** on the entity, which is dispatched by `BaseDbContext`.
-- A domain event handler within the same module publishes an **integration event** via `IEventBus.PublishAsync()`.
-- The target module implements a handler (`INotificationHandler<T>`) for the integration event and executes its logic.
-- **Shared contracts** (integration events, role/policy constants) live in the **SharedKernel**.
-- Each module creates and maintains its **own entities**, even if they represent the same real-world concept. E.g.: `Usuario` (Identity) → `Cliente` (Shop), `Vendedor` (Sales).
-- Consistency between modules is **eventual** — failures in consumer modules do not roll back operations in the source module.
+### Cross-module Communication Patterns
+- Modules do **not** reference each other directly.
+- Source module raises a domain event → handler publishes integration event → other modules consume integration event.
+- Shared contracts (integration events, role constants, etc.) live in SharedKernel.
+- Example flow:
+  - Identity: `UserCreated` (domain event) → publishes `UserCreatedIntegrationEvent`.
+  - Shop: handles event, creates `Cliente`.
+  - Sales: handles event, creates `Vendedor`.
+- Consistency is eventual: consumers may fail without affecting the source transaction.
 
-#### Flow example:
-```
-Identity: CreateUser → UserCreated (domain event)
-  → handler publishes UserCreatedIntegrationEvent { UserId, Roles[] }
+### Event Type Resolution & Outbox
+- Integration events are stored in the outbox table as JSON along with their CLR type name.
+- `EventTypeRegistry` resolves the type when processing outbox messages.
+- Outbox workers (processing/recovery/cleanup) are registered per module.
 
-Shop: handler receives event → if Roles.Contains("Cliente") → creates Cliente
-Sales: handler receives event → if Roles.Contains("Vendedor") → creates Vendedor
-```
+### Request Context (IRequestContext)
+- Provides authenticated user info: `UserId`, `UserName`, `Roles`, `Claims`, etc.
+- `RequestContext` reads from `HttpContext.User`.
+- Registered automatically by `AddModule`.
+- Modules can extend the context for module-specific needs.
 
-#### Cross-module authorization:
-- **Identity** owns authentication, roles, and JWT.
-- Role constants and policy names live in the **SharedKernel** (e.g.: `Perfis.Cliente`, `AuthPolicies.ApenasVendedor`).
-- **Identity** registers the policies (`AddAuthorizationBuilder().AddPolicy(...)`).
-- **Any module** applies policies to its endpoints via `.RequireAuthorization(AuthPolicies.ApenasCliente)`.
+### Workers
+- Workers inherit from `BaseWorker` (a `BackgroundService` subclass).
+- Standardized error handling and logging.
+- Use `IServiceScopeFactory` to resolve scoped services.
 
-### 9. Workers
-- Workers inherit from `BaseWorker` (which inherits from `BackgroundService`).
-- They receive `IServiceScopeFactory` to resolve scoped dependencies.
-- Include standardized logging and error handling.
-
-### 10. Endpoints
-- Use **Minimal APIs** with `MapGroup()` to group endpoints by module.
-- Use `.WithGroupName(ModuleName)` to bind the group to the module's OpenAPI document.
-- Document all endpoints with `.WithSummary()`, `.WithDescription()`, `.Produces<T>()`.
-- Use `.WithTags()` for OpenAPI organization.
-
-### 11. API Documentation (OpenAPI)
-- Each module has its own OpenAPI document, automatically registered by `AddModule`.
-- The documentation UI is configurable via `appsettings.json`:
+### Endpoints and OpenAPI
+- Use Minimal APIs grouped by module: `app.MapGroup(...)`.
+- Use `.WithGroupName(ModuleName)` to associate endpoints with the module's OpenAPI document.
+- Document endpoints using `.WithSummary()`, `.WithDescription()`, `.Produces<T>()`, `.WithTags()`.
+- OpenAPI UI is configurable via `appsettings.json`:
   ```json
   "OpenApi": { "UI": "Scalar" }
   ```
-- Supported values: `"Scalar"` (default) or `"Swagger"`.
-- In development, the UI is available at `/scalar` (Scalar) or `/swagger` (Swagger).
 
-### 12. Request Context
-- `IRequestContext` (SharedKernel) provides authenticated user information: `UserId`, `UserName`, `IsAuthenticated`, `Roles`, `Claims`.
-- `RequestContext` implements `IRequestContext` by reading data from `HttpContext.User` (via `IHttpContextAccessor`).
-- It is automatically registered as **Scoped** by `AddModule` — no manual registration needed.
-- **Can be injected into handlers, use cases, and services** to access logged-in user information.
-- **Modules can create extended contexts** with domain-specific information:
-  ```csharp
-  // In the Shop module:
-  public interface IShopRequestContext : IRequestContext
-  {
-      Guid? ClienteId { get; }
-      bool IsClienteAtivo { get; }
-  }
+### Naming Conventions
+- Domain concepts and entities: **pt-BR**.
+- Logging and infrastructure messages: **English**.
 
-  public class ShopRequestContext(IRequestContext inner, ShopDbContext db)
-      : IShopRequestContext
-  {
-      // Delegates base properties to inner
-      // Resolves ClienteId by querying the database with UserId
-  }
-  ```
-- The extended context is registered in the module's `RegisterServices`:
-  ```csharp
-  services.AddScoped<IShopRequestContext, ShopRequestContext>();
-  ```
+### Testing
+- Each module should have a test project.
+- Use `NSubstitute` for mocking.
+- Add tests for business rules (domain) and use case behavior (application).
 
-### 13. Naming Conventions
-- Entities, use cases, and domain concepts must be named in **pt-BR** (Brazilian Portuguese).
-- Infrastructure/framework names may remain in English.
-- **Logging must always be in English**, for consistency and ease of search in monitoring tools.
+### Configuration
+- Use environment variables for secrets in production.
+- Use `appsettings.Development.json` in development.
+- Do not commit secrets.
 
-### 14. Testing
-- Each module must have a corresponding test project.
-- Domain tests validate business rules (entities, value objects).
-- Application tests validate use cases with mocks (NSubstitute).
-- Structure mirrors the module: `Tests/Domain/`, `Tests/Application/UseCases/`.
+## Module Template (current structure)
 
-### 15. Configuration
-- Connection strings and sensitive settings must use **environment variables** in production.
-- In development, use `appsettings.Development.json`.
-- Never commit secrets to version control.
+Template folder: `templates/module`
+
+```
+templates/module/
+├── src/
+│   └── Modules/
+│       └── NomeModulo/
+│           ├── NomeModuloModule.cs
+│           ├── Application/
+│           │   ├── DTOs/
+│           │   └── UseCases/
+│           ├── Domain/
+│           │   ├── Entities/
+│           │   └── Events/
+│           ├── Endpoints/
+│           └── Infrastructure/
+│               └── Persistence/NomeModuloDbContext.cs
+└── tests/
+    └── Modules/
+        └── NomeModulo/
+            └── ...
+```
 
 ## How to Create a New Module
 
@@ -181,54 +196,32 @@ Sales: handler receives event → if Roles.Contains("Vendedor") → creates Vend
 # From the solution root:
 dotnet new modularapi-module -n <ModuleName> --SolutionPrefix <SolutionPrefix>
 ```
-This automatically creates the complete structure (src + tests) with all necessary files.
 
 ### Post-creation steps:
-1. Add the created projects to the solution (`.slnx`) inside the virtual folders:
+1. Add generated projects to the solution:
    ```bash
    dotnet sln add src/Modules/<ModuleName>/<Prefix>.Modules.<ModuleName>.csproj --solution-folder Modules
    dotnet sln add tests/Modules/<ModuleName>/<Prefix>.Modules.<ModuleName>.Tests.csproj --solution-folder Tests
    ```
-2. Add the module reference to `Host.csproj`.
-3. Register in the Host's `Program.cs`:
+2. Add module reference into `Host.csproj`.
+3. Register in `Program.cs`:
    ```csharp
    builder.Services.AddModule<ModuleNameModule>(builder.Configuration);
    app.MapModuleEndpoints<ModuleNameModule>();
    ```
-4. Add the connection string to `appsettings.json`:
+4. Add connection string to `appsettings.json`:
    ```json
-   "ConnectionStrings": { "ModuleNameDb": "your-connection-string" }
+   "ConnectionStrings": { "ModuleNameDb": "..." }
    ```
-
-### Generated structure:
-```
-src/Modules/<ModuleName>/
-├── Domain/Entities/
-├── Domain/Events/
-├── Application/DTOs/
-├── Application/UseCases/
-├── Infrastructure/Persistence/<ModuleName>DbContext.cs
-├── Endpoints/
-└── <ModuleName>Module.cs
-
-tests/Modules/<ModuleName>/
-├── Application/UseCases/
-└── Domain/
-```
 
 ### Manual (without template):
 1. Create the project: `dotnet new classlib -n <Prefix>.Modules.<Name>`
-2. Add a reference to SharedKernel and the ASP.NET Core FrameworkReference.
-3. Create the folder structure: `Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`.
-4. Implement `IModule` in the `<Name>Module.cs` file.
-5. Register in the Host: `AddModule<NameModule>()` and `MapModuleEndpoints<NameModule>()`.
-6. Create the corresponding test project.
-7. Add both projects to the solution with virtual folders:
-   ```bash
-   dotnet sln add src/Modules/<Name>/<Prefix>.Modules.<Name>.csproj --solution-folder Modules
-   dotnet sln add tests/Modules/<Name>/<Prefix>.Modules.<Name>.Tests.csproj --solution-folder Tests
-   ```
-8. Add the connection string to `appsettings.json`.
+2. Add reference to SharedKernel and ASP.NET Core `FrameworkReference`.
+3. Create folder structure: `Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`.
+4. Implement `IModule` in `<Name>Module.cs`.
+5. Register in the Host: `AddModule<NameModule>()`, `MapModuleEndpoints<NameModule>()`.
+6. Create test project and add to the solution.
+7. Add connection string to `appsettings.json`.
 
 ## Dependency Diagram
 
@@ -239,7 +232,7 @@ tests/Modules/<ModuleName>/
 └──────┬───────────────────┬───────────────────┘
        │                   │
        ▼                   ▼
-┌──────────────┐   ┌───────────────────┐
+┌──────────────┐   ┌────────────────────┐
 │ SharedKernel │◄──│  Produtos Module   │
 │              │   │  (example)         │
 │ • Entity     │   │  • Domain          │
@@ -247,7 +240,7 @@ tests/Modules/<ModuleName>/
 │ • BaseDbCtx  │   │  • Infrastructure  │
 │ • IEventBus  │   │  • Endpoints       │
 │ • BaseWorker │   │  • ProdutosModule  │
-│ • Result<T>  │   └───────────────────┘
-│ • MediatR    │
+│ • Result<T>  │   └────────────────────┘
+│ • IRequest   │
 └──────────────┘
 ```
