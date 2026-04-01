@@ -39,7 +39,7 @@ public class Dispatcher : IDispatcher
     public async Task<Result> SendAsync<TRequest>(TRequest request, CancellationToken cancellationToken = default)
         where TRequest : IRequest
     {
-        var handlerType = typeof(IRequestHandler<,>).MakeGenericType(typeof(TRequest));
+        var handlerType = typeof(IRequestHandler<>).MakeGenericType(typeof(TRequest));
 
         var handler = (IRequestHandler<TRequest>?)_serviceProvider.GetService(handlerType);
 

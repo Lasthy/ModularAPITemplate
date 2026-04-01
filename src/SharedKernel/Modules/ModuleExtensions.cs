@@ -18,8 +18,6 @@ namespace ModularAPITemplate.SharedKernel.Modules;
 /// </summary>
 public static class ModuleExtensions
 {
-    private static bool _sharedServicesRegistered;
-
     private record ModuleAssemblyLoading { };
 
     /// <summary>
@@ -36,6 +34,7 @@ public static class ModuleExtensions
         }
 
         var modulesSection = configuration.GetSection("Modules");
+
         if (!modulesSection.Exists())
             return services;
 
@@ -114,13 +113,12 @@ public static class ModuleExtensions
         where TModule : IModule
     {
         // Register shared services only once
-        if (!_sharedServicesRegistered)
+        if (!services.Any(s => s.ServiceType == typeof(IRequestContext)))
         {
             services.AddHttpContextAccessor();
             services.AddScoped<IRequestContext, RequestContext>();
             services.AddScoped<AuditSaveChangesInterceptor>();
             services.AddTransient<IDispatcher, Dispatcher>();
-            _sharedServicesRegistered = true;
         }
 
         // Register module-specific Outbox configuration for DI consumption

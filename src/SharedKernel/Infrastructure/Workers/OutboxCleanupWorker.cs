@@ -22,13 +22,13 @@ public class OutboxCleanupWorker<TModule, TContext> : BaseWorker
     private readonly OutboxConfiguration<TModule> _configuration;
 
     public OutboxCleanupWorker(IServiceScopeFactory serviceScopeFactory, ILogger<OutboxCleanupWorker<TModule, TContext>> logger, OutboxConfiguration<TModule> configuration)
-        : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
+        : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1)) // just pass anything, I will override it in the constructor
     {
         _logger = logger;
         _scopeFactory = serviceScopeFactory;
         _configuration = configuration;
 
-        Interval = TimeSpan.FromSeconds(_configuration.RecoveryThresholdSeconds);
+        Interval = TimeSpan.FromDays(_configuration.CleanupThresholdDays);
     }
 
     /// <summary>

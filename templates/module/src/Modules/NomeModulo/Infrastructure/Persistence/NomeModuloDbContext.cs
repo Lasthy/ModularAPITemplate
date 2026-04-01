@@ -15,6 +15,8 @@ public sealed class NomeModuloDbContext(
 
     /// <inheritdoc/>
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
+    /// <inheritdoc/>
+    public DbSet<InboxMessage> InboxMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,6 +25,7 @@ public sealed class NomeModuloDbContext(
         // Apply shared kernel behavior (soft-delete filtering, outbox mapping, etc.)
         modelBuilder.ApplySoftDeleteQueryFilter();
         modelBuilder.ConfigureOutboxMessage();
+        modelBuilder.ConfigureInboxMessage();
 
         // Ensure module schema is isolated.
         modelBuilder.HasDefaultSchema("nomemodulo_schema");

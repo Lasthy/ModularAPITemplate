@@ -74,9 +74,9 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
     {
         var messages = Array.Empty<OutboxMessage>();
 
-        var success = false;
+        var attempts = 0;
 
-        while(!success)
+        while(attempts++ < _configuration.MaxRetryAttempts && messages.Length == 0)
         {
             try
             {
@@ -101,7 +101,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
             {
                 _logger.LogWarning("Concurrency conflict while claiming outbox messages. Retrying...");
 
-                await Task.Delay(Random.Shared.Next(1, 50));
+                await Task.Delay(Random.Shared.Next(10, 150));
             }
         }
 
@@ -147,7 +147,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
 
-        var db = scope.ServiceProvider.GetRequiredService<IBaseDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<TContext>();
 
         var msg = await db.OutboxMessages.FindAsync(id);
 
@@ -161,7 +161,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
         _logger.LogError(ex, "Failed to process outbox message with id {MessageId}", message.Id);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<IBaseDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<TContext>();
 
         var msg = await db.OutboxMessages.FindAsync(message.Id);
 

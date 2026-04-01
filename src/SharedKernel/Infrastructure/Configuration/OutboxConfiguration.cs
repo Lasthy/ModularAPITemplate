@@ -57,6 +57,11 @@ public class OutboxConfiguration<TModule> where TModule : IModule
     public int CleanupThresholdDays => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Outbox:CleanupThresholdDays", 7);
 
     /// <summary>
+    /// Maximum number of retry attempts for processing a batch of messages before giving up.
+    /// </summary>
+    public int MaxRetryAttempts => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Outbox:MaxRetryAttempts", 3);
+
+    /// <summary>
     /// Returns all supported partitions for the configured range.
     /// </summary>
     public int[] GetPartitions()

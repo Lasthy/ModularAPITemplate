@@ -15,6 +15,11 @@ public interface IBaseDbContext
     /// </summary>
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
 
+    /// <summary>
+    /// Inbox messages used to reliably consume integration events during persistence.
+    /// </summary>
+    public DbSet<InboxMessage> InboxMessages { get; set; }
+
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -41,6 +41,25 @@ public static class BaseDbExtensions
             .HasDatabaseName("IX_Outbox_Partition_Dispatch");
         });
     }
+    
+    public static void ConfigureInboxMessage(this ModelBuilder builder)
+    {
+        builder.Entity<InboxMessage>(entity =>
+        {
+            entity.Property(x => x.RowVersion).IsRowVersion();
+
+            entity.HasIndex(x => new
+            {
+                x.Partition,
+                x.ProcessedAt,
+                x.ProcessingAt,
+                x.NextRetryAt,
+                x.OccurredAt
+            })
+            .HasDatabaseName("IX_Inbox_Partition_Dispatch");
+        });
+    }
+    
 
     /// <summary>
     /// Applies a global query filter to exclude soft-deleted entities.
