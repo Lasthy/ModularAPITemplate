@@ -1,48 +1,45 @@
 # ModularAPITemplate
 
-A .NET 10 template for building **modular Web APIs** with Clean Architecture. Each module is self-contained with its own domain, persistence, and endpoints — tied together by a shared kernel and a lightweight host.
+A .NET 10 template set for building modular Web APIs with Clean Architecture. Modules stay isolated and communicate through events, while common infrastructure lives in SharedKernel.
+
+## What You Get
+
+This repository ships two templates:
+
+| Template | Short name | Purpose |
+|---|---|---|
+| Modular API Template | `modularapi` | Creates a new solution skeleton (`Host`, `SharedKernel`, module/test placeholders) |
+| Modular API - Module | `modularapi-module` | Scaffolds one module + one test project for an existing solution |
 
 ## Features
 
-- **Modular architecture** — each domain is an isolated module with its own DbContext, endpoints, and DI
-- **Clean Architecture** per module — Domain, Application, Infrastructure, Endpoints layers
-- **MediatR** — use cases as Commands/Queries with handlers
-- **Integration events** — cross-module communication via `IEventBus` (in-process or external)
-- **Domain events** — automatically dispatched on `SaveChangesAsync`
-- **Request context** — `IRequestContext` provides authenticated user info to handlers and services, extensible per module
-- **Background workers** — `BaseWorker` with scoped DI, logging, and error handling
-- **OpenAPI docs** — each module gets its own document, with Scalar or Swagger UI
-- **Result pattern** — `Result<T>` for use case responses without exceptions
-- **Module template** — scaffold new modules with a single CLI command
+- Modular architecture (module-owned DbContext, endpoints, and DI registration)
+- Clean Architecture structure per module (Domain, Application, Infrastructure, Endpoints)
+- Request/handler pipeline via SharedKernel dispatcher abstractions
+- Integration events through `IEventBus` with outbox/inbox processing support
+- OpenAPI per module (Scalar or Swagger UI in development)
+- Request context (`IRequestContext`) and result pattern (`Result`, `Result<T>`)
+- Background worker base + inbox/outbox workers
 
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-## Installation
+## Install Templates
 
-### Install the templates
-
-From the root of this repository:
+From the repository root:
 
 ```bash
 dotnet new install .
 ```
 
-This installs two templates:
-
-| Template | Short Name | Description |
-|---|---|---|
-| Modular API Template | `modularapi` | Full solution with Host, SharedKernel, and example modules |
-| Modular API - Module | `modularapi-module` | New module (src + tests) for an existing solution |
-
-### Verify installation
+Verify:
 
 ```bash
 dotnet new list modularapi
 ```
 
-## Usage
+## Quick Start
 
 ### 1. Create a new solution
 
@@ -51,97 +48,125 @@ dotnet new modularapi -n MyProject -o MyProject
 cd MyProject
 ```
 
-This generates:
+Current output (minimal skeleton):
 
-```
+```text
 MyProject/
-├── src/
-│   ├── Host/MyProject.Host/           → Entry point (Program.cs)
-│   ├── SharedKernel/MyProject.SharedKernel/  → Shared abstractions
-│   └── Modules/
-│       ├── Produtos/                   → Example module
-│       └── Pedidos/                    → Example module
-├── tests/
-│   └── Modules/
-│       ├── Produtos/
-│       └── Pedidos/
-└── MyProject.slnx
+|- src/
+|  |- Host/
+|  |- SharedKernel/
+|  `- Modules/
+|- tests/
+|  `- Modules/
+`- MyProject.slnx
 ```
 
 ### 2. Build and run
 
 ```bash
 dotnet build
-dotnet run --project src/Host/MyProject.Host
+dotnet run --project src/Host/MyProject.Host.csproj
 ```
 
-The API docs will be available at `/scalar` (default) or `/swagger` (configurable in `appsettings.json`).
+In development, OpenAPI UI is available at:
 
-### 3. Add a new module
+- `/scalar` when `OpenApi:UI = Scalar`
+- `/swagger` when `OpenApi:UI = Swagger`
 
-From the solution root:
+### 3. Add a module
+
+From solution root:
 
 ```bash
 dotnet new modularapi-module -n Clientes --SolutionPrefix MyProject
 ```
 
-Then complete the setup:
+Then finish setup:
 
-1. **Add projects to the solution:**
-   ```bash
-   dotnet sln add src/Modules/Clientes/MyProject.Modules.Clientes.csproj
-   dotnet sln add tests/Modules/Clientes/MyProject.Modules.Clientes.Tests.csproj
-   ```
+1. Add projects to solution folders:
+    ```bash
+    dotnet sln add src/Modules/Clientes/MyProject.Modules.Clientes.csproj --solution-folder Modules
+    dotnet sln add tests/Modules/Clientes/MyProject.Modules.Clientes.Tests.csproj --solution-folder Tests
+    ```
+2. Add module reference to Host:
+    ```bash
+    dotnet add src/Host/MyProject.Host.csproj reference src/Modules/Clientes/MyProject.Modules.Clientes.csproj
+    ```
+3. Register the module in `Program.cs`.
+4. Configure module settings in `appsettings.json`.
+5. Create migrations with EF CLI (do not auto-run migrations at startup).
 
-2. **Add module reference to Host:**
-   ```bash
-   dotnet add src/Host/MyProject.Host/MyProject.Host.csproj reference src/Modules/Clientes/MyProject.Modules.Clientes.csproj
-   ```
+## Module Registration Patterns
 
-3. **Register in `Program.cs`:**
-   ```csharp
-   builder.Services.AddModule<ClientesModule>(builder.Configuration);
-   app.MapModuleEndpoints<ClientesModule>();
-   ```
+### Config-driven loading (default Host style)
 
-4. **Add connection string to `appsettings.json`:**
-   ```json
-   "ConnectionStrings": {
-     "ClientesDb": "Server=localhost;Database=MyProject;Trusted_Connection=true;"
-   }
-   ```
+```csharp
+builder.Services.AddModules(builder.Configuration);
+// Endpoint mapping can be explicit per module:
+// app.MapModuleEndpoints<ClientesModule>();
+```
+
+`AddModules` reads `Modules` configuration entries and tries to load assemblies named `<ModuleName>.Module`.
+
+### Explicit loading
+
+```csharp
+builder.Services.AddModule<ClientesModule>(builder.Configuration.GetSection("Modules:Clientes"));
+app.MapModuleEndpoints<ClientesModule>();
+```
 
 ## Configuration
 
 ### OpenAPI UI
 
-In `appsettings.json`:
-
 ```json
 {
-  "OpenApi": {
-    "UI": "Scalar"
-  }
+   "OpenApi": {
+      "UI": "Scalar"
+   }
 }
 ```
 
-Supported values: `"Scalar"` (default) or `"Swagger"`.
+Supported values: `Scalar` (default) and `Swagger`.
 
-### Connection Strings
+### Module settings (example)
 
-Each module has its own connection string. Use environment variables in production and `appsettings.Development.json` for local development.
+```json
+{
+   "Modules": {
+      "Clientes": {
+         "ConnectionString": "Server=localhost;Database=MyProject_Clientes;Trusted_Connection=true;TrustServerCertificate=true",
+         "Outbox": {
+            "Enabled": true,
+            "IntervalMilliseconds": 1000,
+            "BatchSize": 50
+         },
+         "Inbox": {
+            "Enabled": true,
+            "IntervalMilliseconds": 1000,
+            "BatchSize": 50
+         }
+      }
+   }
+}
+```
 
-## Architecture
+Use environment variables for secrets in production.
 
-See [.ARCHITECTURE.md](.ARCHITECTURE.md) for the full architecture reference (English, source of truth).
+## Template Notes
 
-A Portuguese version is also available: [.ARCHITECTURE.pt-BR.md](.ARCHITECTURE.pt-BR.md).
+- The main template intentionally excludes `templates/**`, repo metadata, and docs from generated projects.
+- The module template scaffolds structure and infrastructure entry points; business entities/use cases/endpoints are intentionally left for implementation.
+
+## Architecture Reference
+
+See [architecture.md](architecture.md) for the full architecture source of truth.
 
 ## AI-Assisted Development
 
-This template includes a Copilot configuration at `.copilot/.description.txt` with project-specific instructions. **When starting a new project from this template, update the `<project_details>` section** in that file to describe your specific project's domain and requirements.
+Project-specific Copilot guidance lives in [.copilot/.description.txt](.copilot/.description.txt). Update the `<project_details>` section when starting a real project from this template.
 
-## Uninstalling the templates
+## Uninstall Templates
 
 ```bash
 dotnet new uninstall <path-to-this-repo>
