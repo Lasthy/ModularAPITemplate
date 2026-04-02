@@ -17,7 +17,7 @@ public class InboxCleanupWorker<TModule, TContext> : BaseWorker
     private readonly InboxConfiguration<TModule> _configuration;
 
     public InboxCleanupWorker(IServiceScopeFactory serviceScopeFactory, ILogger<InboxCleanupWorker<TModule, TContext>> logger, InboxConfiguration<TModule> configuration)
-        : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
+        : base(serviceScopeFactory, logger)
     {
         _configuration = configuration;
 

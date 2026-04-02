@@ -1,28 +1,51 @@
 using System.Reflection;
+using System.Collections.Concurrent;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Events;
 
 /// <summary>
 /// Registry used to resolve event CLR types by name when deserializing outbox messages.
 /// </summary>
-public static class EventTypeRegistry
+public interface IEventTypeRegistry
 {
-    private static readonly Dictionary<string, Type> _types = new();
+    /// <summary>
+    /// Registers an event type by its full name.
+    /// </summary>
+    void Register<T>() where T : IEvent;
+
+    /// <summary>
+    /// Resolves a registered event type by its full name.
+    /// </summary>
+    Type Resolve(string name);
+
+    /// <summary>
+    /// Registers all concrete event types found in the specified assembly.
+    /// </summary>
+    void RegisterFromAssembly(Assembly assembly);
+}
+
+/// <summary>
+/// Default event type registry implementation.
+/// </summary>
+public sealed class EventTypeRegistry : IEventTypeRegistry
+{
+    private readonly ConcurrentDictionary<string, Type> _types = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Registers an event type by its full name.
     /// </summary>
-    public static void Register<T>() where T : IEvent
+    public void Register<T>() where T : IEvent
     {
         var type = typeof(T);
-        _types[type.FullName!] = type;
+
+        Register(type);
     }
 
     /// <summary>
     /// Resolves a registered event type by its full name.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the event type is not registered.</exception>
-    public static Type Resolve(string name)
+    public Type Resolve(string name)
     {
         if (!_types.TryGetValue(name, out var type))
             throw new InvalidOperationException($"Unknown event type: {name}");
@@ -33,7 +56,7 @@ public static class EventTypeRegistry
     /// <summary>
     /// Registers all concrete event types found in the specified assembly.
     /// </summary>
-    public static void RegisterFromAssembly(Assembly assembly)
+    public void RegisterFromAssembly(Assembly assembly)
     {
         var types = assembly
             .GetTypes()
@@ -43,6 +66,22 @@ public static class EventTypeRegistry
                 !t.IsInterface);
 
         foreach (var type in types)
-            _types[type.FullName!] = type;
+            Register(type);
+    }
+
+    private void Register(Type type)
+    {
+        var typeName = type.FullName;
+
+        if (string.IsNullOrWhiteSpace(typeName))
+            throw new InvalidOperationException("Event type must have a full name to be registered.");
+
+        if (_types.TryAdd(typeName, type))
+            return;
+
+        var existing = _types[typeName];
+
+        if (existing != type)
+            throw new InvalidOperationException($"Event type name collision detected for '{typeName}'. Existing: '{existing.AssemblyQualifiedName}', New: '{type.AssemblyQualifiedName}'.");
     }
 }

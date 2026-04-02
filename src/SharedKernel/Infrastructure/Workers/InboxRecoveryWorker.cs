@@ -18,7 +18,7 @@ public class InboxRecoveryWorker<TModule, TContext> : BaseWorker
     private readonly InboxConfiguration<TModule> _configuration;
 
     public InboxRecoveryWorker(IServiceScopeFactory serviceScopeFactory, ILogger<InboxRecoveryWorker<TModule, TContext>> logger, InboxConfiguration<TModule> configuration)
-        : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
+        : base(serviceScopeFactory, logger)
     {
         _logger = logger;
         _configuration = configuration;

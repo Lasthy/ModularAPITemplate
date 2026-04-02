@@ -50,7 +50,8 @@ public static class ModuleExtensions
         if (!modulesSection.Exists())
             return services;
 
-        var logger = services.BuildServiceProvider().GetRequiredService<ILogger<ModuleAssemblyLoading>>();
+        using var loggerFactory = LoggerFactory.Create(static _ => { });
+        var logger = loggerFactory.CreateLogger<ModuleAssemblyLoading>();
 
         foreach (var moduleSection in modulesSection.GetChildren())
         {
@@ -133,16 +134,25 @@ public static class ModuleExtensions
             services.AddTransient<IDispatcher, Dispatcher>();
         }
 
+        if (!services.Any(s => s.ServiceType == typeof(IEventTypeRegistry)))
+        {
+            var registry = new EventTypeRegistry();
+            services.AddSingleton<IEventTypeRegistry>(registry);
+        }
+
         // Register module-specific messaging configuration for DI consumption
         services.AddTransient<OutboxConfiguration<TModule>>();
         services.AddTransient<InboxConfiguration<TModule>>();
 
         // Ensure a tracker is available (singleton) for collecting OpenAPI doc names
-        var tracker = services
-            .BuildServiceProvider()
-            .GetService<OpenApiModuleTracker>();
+        OpenApiModuleTracker tracker;
+        var trackerDescriptor = services.FirstOrDefault(s => s.ServiceType == typeof(OpenApiModuleTracker));
 
-        if (tracker is null)
+        if (trackerDescriptor?.ImplementationInstance is OpenApiModuleTracker existingTracker)
+        {
+            tracker = existingTracker;
+        }
+        else
         {
             tracker = new OpenApiModuleTracker();
             services.AddSingleton(tracker);
@@ -170,6 +180,12 @@ public static class ModuleExtensions
         // Scan the module assembly for handlers and register them
         RegisterEventHandlers(services, typeof(TModule).Assembly);
         RegisterRequestHandlers(services, typeof(TModule).Assembly);
+
+        var eventTypeRegistryDescriptor = services.FirstOrDefault(s => s.ServiceType == typeof(IEventTypeRegistry));
+        if (eventTypeRegistryDescriptor?.ImplementationInstance is IEventTypeRegistry typeRegistry)
+        {
+            typeRegistry.RegisterFromAssembly(typeof(TModule).Assembly);
+        }
 
         RegisterModuleHealthCheck<TModule>(services, moduleName);
 

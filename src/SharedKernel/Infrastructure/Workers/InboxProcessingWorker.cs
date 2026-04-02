@@ -22,7 +22,7 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
     private DateTime? _lastBacklogWarningAtUtc;
 
     public InboxProcessingWorker(IServiceScopeFactory serviceScopeFactory, ILogger<InboxProcessingWorker<TModule, TContext>> logger, InboxConfiguration<TModule> configuration)
-        : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
+        : base(serviceScopeFactory, logger)
     {
         _logger = logger;
         _scopeFactory = serviceScopeFactory;
@@ -111,17 +111,13 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
 
     private async Task<InboxMessage[]> ClaimMessages(IBaseDbContext db, int[] partitions, int batchSize)
     {
-        var messages = Array.Empty<InboxMessage>();
-
-        var attempts = 0;
-
-        while (attempts++ < _configuration.MaxRetryAttempts && messages.Length == 0)
+        for (var attempt = 0; attempt < _configuration.MaxRetryAttempts; attempt++)
         {
             try
             {
                 var now = DateTime.UtcNow;
 
-                messages = await db.InboxMessages
+                var messages = await db.InboxMessages
                     .Where(x =>
                         partitions.Contains(x.Partition) &&
                         x.ProcessedAt == null &&
@@ -135,6 +131,8 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
                     msg.ProcessingAt = now;
 
                 await db.SaveChangesAsync();
+
+                return messages;
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -144,19 +142,25 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
             }
         }
 
-        return messages;
+        return Array.Empty<InboxMessage>();
     }
 
     private async Task ProcessMessage(InboxMessage message, CancellationToken ct, IServiceProvider services)
     {
+        var db = services.GetRequiredService<TContext>();
+        var eventTypeRegistry = services.GetRequiredService<IEventTypeRegistry>();
+
         try
         {
-            var type = EventTypeRegistry.Resolve(message.Type);
+            var type = eventTypeRegistry.Resolve(message.Type);
 
             var @event = JsonSerializer.Deserialize(
                 message.Content,
                 type
             ) as IEvent;
+
+            if (@event is null)
+                throw new InvalidOperationException($"Could not deserialize event payload for inbox message {message.Id}.");
 
             var handlerType = typeof(IEventHandler<>).MakeGenericType(type);
 
@@ -164,30 +168,25 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
 
             foreach (var handler in handlers)
             {
-                var method = handlerType.GetMethod("HandleAsync");
-
-                if (method == null)
+                if (handler is null)
                     continue;
 
-                var task = (Task)method.Invoke(handler, new object[] { @event!, ct })!;
+                dynamic typedHandler = handler;
+                dynamic typedEvent = @event;
 
-                await task;
+                await typedHandler.HandleAsync(typedEvent, ct);
             }
 
-            await MarkProcessed(message.Id);
+            await MarkProcessed(db, message.Id);
         }
         catch (Exception ex)
         {
-            await HandleFailure(message, ex);
+            await HandleFailure(db, message, ex);
         }
     }
 
-    private async Task MarkProcessed(Ulid id)
+    private static async Task MarkProcessed(TContext db, Ulid id)
     {
-        await using var scope = _scopeFactory.CreateAsyncScope();
-
-        var db = scope.ServiceProvider.GetRequiredService<TContext>();
-
         var msg = await db.InboxMessages.FindAsync(id);
 
         msg!.ProcessedAt = DateTime.UtcNow;
@@ -195,12 +194,9 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
         await db.SaveChangesAsync();
     }
 
-    private async Task HandleFailure(InboxMessage message, Exception ex)
+    private async Task HandleFailure(TContext db, InboxMessage message, Exception ex)
     {
         _logger.LogError(ex, "Failed to process inbox message with id {MessageId}", message.Id);
-
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<TContext>();
 
         var msg = await db.InboxMessages.FindAsync(message.Id);
 

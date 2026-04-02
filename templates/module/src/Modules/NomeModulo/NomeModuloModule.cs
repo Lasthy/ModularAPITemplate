@@ -37,11 +37,9 @@ public sealed class NomeModuloModule : IModule
         services.AddHostedService<OutboxCleanupWorker<NomeModuloModule, NomeModuloDbContext>>();
 
         // Services
-        services.AddSingleton<IEventBus, InProcessEventBus<NomeModuloDbContext>>();
+        services.AddSingleton<IEventBus, InProcessEventBus>();
+        services.AddScoped<IIntegrationEventPublisher, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
         services.AddScoped<IIntegrationEventPublisher<NomeModuloDbContext>, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
-
-        // Register events for the outbox processing pipeline.
-        EventTypeRegistry.RegisterFromAssembly(typeof(NomeModuloModule).Assembly);
     }
 
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)

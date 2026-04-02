@@ -22,7 +22,7 @@ public class OutboxRecoveryWorker<TModule, TContext> : BaseWorker
     private readonly OutboxConfiguration<TModule> _configuration;
 
     public OutboxRecoveryWorker(IServiceScopeFactory serviceScopeFactory, ILogger<OutboxRecoveryWorker<TModule, TContext>> logger, OutboxConfiguration<TModule> configuration)
-        : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
+        : base(serviceScopeFactory, logger)
     {
         _logger = logger;
         _scopeFactory = serviceScopeFactory;

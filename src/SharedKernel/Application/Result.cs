@@ -75,6 +75,10 @@ public class Result
 /// <summary>
 /// Represents a result containing a typed value.
 /// </summary>
+/// <remarks>
+/// The constructor is intentionally internal to enforce creation through <see cref="Result"/>
+/// factory methods, keeping success/failure invariants centralized.
+/// </remarks>
 /// <typeparam name="T">Type of the value.</typeparam>
 public class Result<T> : Result
 {

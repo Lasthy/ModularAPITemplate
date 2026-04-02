@@ -16,6 +16,11 @@ public abstract class BaseWorker(
     protected TimeSpan Interval { get; set; } = interval ?? TimeSpan.FromMinutes(1);
     private bool _cancellationRequested = false;
 
+    protected BaseWorker(IServiceScopeFactory scopeFactory, ILogger logger)
+        : this(scopeFactory, logger, null)
+    {
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var workerName = GetType().Name;
