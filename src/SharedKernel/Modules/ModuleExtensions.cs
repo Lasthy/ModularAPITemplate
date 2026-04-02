@@ -121,8 +121,9 @@ public static class ModuleExtensions
             services.AddTransient<IDispatcher, Dispatcher>();
         }
 
-        // Register module-specific Outbox configuration for DI consumption
+        // Register module-specific messaging configuration for DI consumption
         services.AddTransient<OutboxConfiguration<TModule>>();
+        services.AddTransient<InboxConfiguration<TModule>>();
 
         // Ensure a tracker is available (singleton) for collecting OpenAPI doc names
         var tracker = services

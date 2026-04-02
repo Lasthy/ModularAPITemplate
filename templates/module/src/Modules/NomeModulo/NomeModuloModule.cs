@@ -28,7 +28,10 @@ public sealed class NomeModuloModule : IModule
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
-        // Outbox workers
+        // Messaging workers
+        services.AddHostedService<InboxProcessingWorker<NomeModuloModule, NomeModuloDbContext>>();
+        services.AddHostedService<InboxRecoveryWorker<NomeModuloModule, NomeModuloDbContext>>();
+        services.AddHostedService<InboxCleanupWorker<NomeModuloModule, NomeModuloDbContext>>();
         services.AddHostedService<OutboxProcessingWorker<NomeModuloModule, NomeModuloDbContext>>();
         services.AddHostedService<OutboxRecoveryWorker<NomeModuloModule, NomeModuloDbContext>>();
         services.AddHostedService<OutboxCleanupWorker<NomeModuloModule, NomeModuloDbContext>>();
