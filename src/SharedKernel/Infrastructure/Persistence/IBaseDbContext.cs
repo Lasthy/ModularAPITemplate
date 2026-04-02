@@ -1,5 +1,6 @@
 using Cysharp.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using ModularAPITemplate.SharedKernel.Domain;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
@@ -21,5 +22,8 @@ public interface IBaseDbContext
     public DbSet<InboxMessage> InboxMessages { get; set; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
+
+    public DatabaseFacade Database { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

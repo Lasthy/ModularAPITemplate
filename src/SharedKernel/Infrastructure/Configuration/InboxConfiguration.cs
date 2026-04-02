@@ -62,6 +62,18 @@ public class InboxConfiguration<TModule> where TModule : IModule
     public int CleanupThresholdDays => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Inbox:CleanupThresholdDays", 7);
 
     /// <summary>
+    /// Pending inbox message count that triggers a warning log when reached or exceeded.
+    /// Set to 0 or less to disable backlog warnings.
+    /// </summary>
+    public int BacklogWarningThreshold => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Inbox:BacklogWarningThreshold", 1000);
+
+    /// <summary>
+    /// Minimum number of seconds between backlog warning logs while the backlog remains above the threshold.
+    /// Set to 0 or less to log every cycle when above threshold.
+    /// </summary>
+    public int BacklogWarningCooldownSeconds => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Inbox:BacklogWarningCooldownSeconds", 300);
+
+    /// <summary>
     /// Returns all supported partitions for the configured range.
     /// </summary>
     public int[] GetPartitions()

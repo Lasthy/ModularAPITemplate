@@ -201,7 +201,9 @@ dotnet ef migrations add <Name> -p <ModuleProject> -s <HostProject>
       "PartitionEnd": 63,
       "RecoveryThresholdSeconds": 60,
       "CleanupThresholdDays": 7,
-      "MaxRetryAttempts": 3
+      "MaxRetryAttempts": 3,
+      "BacklogWarningThreshold": 1000,
+      "BacklogWarningCooldownSeconds": 300
     },
     "Inbox": {
       "Enabled": true,
@@ -211,7 +213,9 @@ dotnet ef migrations add <Name> -p <ModuleProject> -s <HostProject>
       "PartitionEnd": 63,
       "RecoveryThresholdSeconds": 60,
       "CleanupThresholdDays": 7,
-      "MaxRetryAttempts": 3
+      "MaxRetryAttempts": 3,
+      "BacklogWarningThreshold": 1000,
+      "BacklogWarningCooldownSeconds": 300
     }
   }
 }

@@ -19,6 +19,7 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<InboxProcessingWorker<TModule, TContext>> _logger;
     private readonly InboxConfiguration<TModule> _configuration;
+    private DateTime? _lastBacklogWarningAtUtc;
 
     public InboxProcessingWorker(IServiceScopeFactory serviceScopeFactory, ILogger<InboxProcessingWorker<TModule, TContext>> logger, InboxConfiguration<TModule> configuration)
         : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
@@ -49,6 +50,8 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
 
         var partitions = _configuration.GetPartitions();
 
+        await WarnIfBacklogIsGrowing(context, partitions, cancellationToken);
+
         var messages = await ClaimMessages(context, partitions, _configuration.BatchSize);
 
         if (messages.Length == 0)
@@ -67,6 +70,43 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
                 await ProcessMessage(message, ct, scope.ServiceProvider);
             }
         );
+    }
+
+    private async Task WarnIfBacklogIsGrowing(IBaseDbContext db, int[] partitions, CancellationToken cancellationToken)
+    {
+        var backlogWarningThreshold = _configuration.BacklogWarningThreshold;
+
+        if (backlogWarningThreshold <= 0)
+            return;
+
+        var pendingCount = await db.InboxMessages
+            .Where(x =>
+                partitions.Contains(x.Partition) &&
+                x.ProcessedAt == null &&
+                x.ProcessingAt == null)
+            .CountAsync(cancellationToken);
+
+        if (pendingCount < backlogWarningThreshold)
+            return;
+
+        var cooldown = TimeSpan.FromSeconds(Math.Max(0, _configuration.BacklogWarningCooldownSeconds));
+        var now = DateTime.UtcNow;
+
+        if (cooldown > TimeSpan.Zero &&
+            _lastBacklogWarningAtUtc.HasValue &&
+            now - _lastBacklogWarningAtUtc.Value < cooldown)
+            return;
+
+        _lastBacklogWarningAtUtc = now;
+
+        _logger.LogWarning(
+            "Inbox backlog warning for module {ModuleName}. Pending messages: {PendingCount}. Threshold: {BacklogWarningThreshold}. Partition range: {PartitionStart}-{PartitionEnd}. CooldownSeconds: {BacklogWarningCooldownSeconds}",
+            TModule.ModuleName,
+            pendingCount,
+            backlogWarningThreshold,
+            _configuration.PartitionStart,
+            _configuration.PartitionEnd,
+            _configuration.BacklogWarningCooldownSeconds);
     }
 
     private async Task<InboxMessage[]> ClaimMessages(IBaseDbContext db, int[] partitions, int batchSize)

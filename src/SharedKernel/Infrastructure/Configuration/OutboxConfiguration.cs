@@ -62,6 +62,18 @@ public class OutboxConfiguration<TModule> where TModule : IModule
     public int MaxRetryAttempts => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Outbox:MaxRetryAttempts", 3);
 
     /// <summary>
+    /// Pending outbox message count that triggers a warning log when reached or exceeded.
+    /// Set to 0 or less to disable backlog warnings.
+    /// </summary>
+    public int BacklogWarningThreshold => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Outbox:BacklogWarningThreshold", 1000);
+
+    /// <summary>
+    /// Minimum number of seconds between backlog warning logs while the backlog remains above the threshold.
+    /// Set to 0 or less to log every cycle when above threshold.
+    /// </summary>
+    public int BacklogWarningCooldownSeconds => _configuration.GetValue<int>($"Modules:{TModule.ModuleName}:Outbox:BacklogWarningCooldownSeconds", 300);
+
+    /// <summary>
     /// Returns all supported partitions for the configured range.
     /// </summary>
     public int[] GetPartitions()

@@ -20,6 +20,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OutboxProcessingWorker<TModule, TContext>> _logger;
     private readonly OutboxConfiguration<TModule> _configuration;
+    private DateTime? _lastBacklogWarningAtUtc;
 
     public OutboxProcessingWorker(IServiceScopeFactory serviceScopeFactory, ILogger<OutboxProcessingWorker<TModule, TContext>> logger, OutboxConfiguration<TModule> configuration)
         : base(serviceScopeFactory, logger, TimeSpan.FromSeconds(1))
@@ -50,6 +51,8 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
 
         var partitions = _configuration.GetPartitions();
 
+        await WarnIfBacklogIsGrowing(context, partitions, cancellationToken);
+
         var messages = await ClaimMessages(context, partitions, _configuration.BatchSize);
 
         if(messages.Length == 0)
@@ -68,6 +71,43 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
                 await ProcessMessage(message, ct, services.ServiceProvider);
             }
         );
+    }
+
+    private async Task WarnIfBacklogIsGrowing(IBaseDbContext db, int[] partitions, CancellationToken cancellationToken)
+    {
+        var backlogWarningThreshold = _configuration.BacklogWarningThreshold;
+
+        if (backlogWarningThreshold <= 0)
+            return;
+
+        var pendingCount = await db.OutboxMessages
+            .Where(x =>
+                partitions.Contains(x.Partition) &&
+                x.ProcessedAt == null &&
+                x.ProcessingAt == null)
+            .CountAsync(cancellationToken);
+
+        if (pendingCount < backlogWarningThreshold)
+            return;
+
+        var cooldown = TimeSpan.FromSeconds(Math.Max(0, _configuration.BacklogWarningCooldownSeconds));
+        var now = DateTime.UtcNow;
+
+        if (cooldown > TimeSpan.Zero &&
+            _lastBacklogWarningAtUtc.HasValue &&
+            now - _lastBacklogWarningAtUtc.Value < cooldown)
+            return;
+
+        _lastBacklogWarningAtUtc = now;
+
+        _logger.LogWarning(
+            "Outbox backlog warning for module {ModuleName}. Pending messages: {PendingCount}. Threshold: {BacklogWarningThreshold}. Partition range: {PartitionStart}-{PartitionEnd}. CooldownSeconds: {BacklogWarningCooldownSeconds}",
+            TModule.ModuleName,
+            pendingCount,
+            backlogWarningThreshold,
+            _configuration.PartitionStart,
+            _configuration.PartitionEnd,
+            _configuration.BacklogWarningCooldownSeconds);
     }
 
     private async Task<OutboxMessage[]> ClaimMessages(IBaseDbContext db, int[] partitions, int batchSize)
@@ -110,6 +150,10 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
 
     private async Task ProcessMessage(OutboxMessage message, CancellationToken ct, IServiceProvider services)
     {
+        var db = services.GetRequiredService<TContext>();
+
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        
         try
         {
             var type = EventTypeRegistry.Resolve(message.Type);
@@ -125,7 +169,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
 
             foreach (var handler in handlers)
             {
-                var method = handlerType.GetMethod("HandleAsync");
+                var method = handlerType.GetMethod(nameof(IEventHandler<>.HandleAsync), new[] { type, typeof(CancellationToken) });
 
                 if (method == null)
                     continue;
@@ -136,9 +180,13 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
             }
 
             await MarkProcessed(message.Id);
+
+            await transaction.CommitAsync(ct);
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(ct);
+
             await HandleFailure(message, ex);
         }
     }
