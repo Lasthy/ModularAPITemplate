@@ -1,3 +1,6 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
 using ModularAPITemplate.SharedKernel.Modules;
 using Scalar.AspNetCore;
@@ -9,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ----- Registro de módulos -----
 builder.Services.AddModules(builder.Configuration);
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -40,6 +44,32 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = async (httpContext, report) =>
+    {
+        httpContext.Response.ContentType = "application/json";
+
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            totalDurationMilliseconds = report.TotalDuration.TotalMilliseconds,
+            checks = report.Entries.Select(entry => new
+            {
+                name = entry.Key,
+                status = entry.Value.Status.ToString(),
+                description = entry.Value.Description,
+                durationMilliseconds = entry.Value.Duration.TotalMilliseconds,
+                data = entry.Value.Data,
+                tags = entry.Value.Tags,
+            }),
+        };
+
+        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(payload));
+    },
+});
 
 // ----- Endpoints dos módulos -----
 

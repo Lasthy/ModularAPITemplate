@@ -1,13 +1,16 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using ModularAPITemplate.SharedKernel.Application.Context;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
+using ModularAPITemplate.SharedKernel.Infrastructure.Health;
 using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 using ModularAPITemplate.SharedKernel.Infrastructure.Requests;
 
@@ -19,6 +22,15 @@ namespace ModularAPITemplate.SharedKernel.Modules;
 public static class ModuleExtensions
 {
     private record ModuleAssemblyLoading { };
+    private sealed class ModuleHealthCheckRegistry
+    {
+        private readonly HashSet<string> _registeredNames = new(StringComparer.OrdinalIgnoreCase);
+
+        public bool TryRegister(string healthCheckName)
+        {
+            return _registeredNames.Add(healthCheckName);
+        }
+    }
 
     /// <summary>
     /// Loads and registers modules defined in the <c>Modules</c> configuration section.
@@ -159,7 +171,70 @@ public static class ModuleExtensions
         RegisterEventHandlers(services, typeof(TModule).Assembly);
         RegisterRequestHandlers(services, typeof(TModule).Assembly);
 
+        RegisterModuleHealthCheck<TModule>(services, moduleName);
+
         return services;
+    }
+
+    private static void RegisterModuleHealthCheck<TModule>(IServiceCollection services, string moduleName)
+        where TModule : IModule
+    {
+        var dbContextType = ResolveModuleDbContextType(typeof(TModule).Assembly, moduleName);
+        if (dbContextType is null)
+        {
+            return;
+        }
+
+        var healthCheckName = moduleName.ToLowerInvariant();
+
+        var registry = services
+            .FirstOrDefault(descriptor => descriptor.ServiceType == typeof(ModuleHealthCheckRegistry))
+            ?.ImplementationInstance as ModuleHealthCheckRegistry;
+
+        if (registry is null)
+        {
+            registry = new ModuleHealthCheckRegistry();
+            services.AddSingleton(registry);
+        }
+
+        if (!registry.TryRegister(healthCheckName))
+        {
+            return;
+        }
+
+        var addMethod = typeof(ModuleExtensions)
+            .GetMethod(nameof(AddModuleHealthCheckRegistration), BindingFlags.NonPublic | BindingFlags.Static);
+
+        if (addMethod is null)
+        {
+            return;
+        }
+
+        var genericAddMethod = addMethod.MakeGenericMethod(dbContextType, typeof(TModule));
+        genericAddMethod.Invoke(null, new object[] { services, healthCheckName });
+    }
+
+    private static Type? ResolveModuleDbContextType(Assembly moduleAssembly, string moduleName)
+    {
+        var expectedTypeName = string.Concat(moduleName, "DbContext");
+        var dbContextTypes = moduleAssembly.GetTypes()
+            .Where(type => !type.IsAbstract
+                           && typeof(DbContext).IsAssignableFrom(type)
+                           && typeof(IBaseDbContext).IsAssignableFrom(type))
+            .ToList();
+
+        return dbContextTypes
+            .FirstOrDefault(type => string.Equals(type.Name, expectedTypeName, StringComparison.OrdinalIgnoreCase))
+            ?? dbContextTypes.FirstOrDefault();
+    }
+
+    private static void AddModuleHealthCheckRegistration<TContext, TModule>(IServiceCollection services, string healthCheckName)
+        where TContext : DbContext, IBaseDbContext
+        where TModule : IModule
+    {
+        services
+            .AddHealthChecks()
+            .AddModuleHealthCheck<TContext, TModule>(healthCheckName);
     }
 
     /// <summary>
