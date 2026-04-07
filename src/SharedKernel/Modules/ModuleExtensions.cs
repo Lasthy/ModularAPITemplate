@@ -131,6 +131,7 @@ public static class ModuleExtensions
             services.AddHttpContextAccessor();
             services.AddScoped<IRequestContext, RequestContext>();
             services.AddScoped<AuditSaveChangesInterceptor>();
+            services.AddScoped<IEventBus, InProcessEventBus>();
             services.AddTransient<IDispatcher, Dispatcher>();
         }
 
@@ -314,6 +315,80 @@ public static class ModuleExtensions
         where TModule : IModule
     {
         TModule.MapEndpoints(endpoints);
+        return endpoints;
+    }
+
+     /// <summary>
+    /// Maps endpoints for every module configured under the <c>Modules</c> section.
+    /// </summary>
+    /// <param name="endpoints">Endpoint builder.</param>
+    /// <param name="configuration">Application configuration.</param>
+    /// <returns>The same endpoint builder for fluent chaining.</returns>
+    public static IEndpointRouteBuilder MapModuleEndpoints(
+        this IEndpointRouteBuilder endpoints,
+        IConfiguration configuration)
+    {
+        if (configuration is null)
+        {
+            return endpoints;
+        }
+
+        var modulesSection = configuration.GetSection("Modules");
+        if (!modulesSection.Exists())
+        {
+            return endpoints;
+        }
+
+        foreach (var moduleSection in modulesSection.GetChildren())
+        {
+            var moduleName = moduleSection.Key;
+            if (string.IsNullOrWhiteSpace(moduleName))
+            {
+                continue;
+            }
+
+            var assemblyName = string.Concat(moduleName, ".Module");
+
+            var assembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));
+
+            if (assembly is null)
+            {
+                try
+                {
+                    assembly = Assembly.Load(new AssemblyName(assemblyName));
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            Type? moduleType;
+            try
+            {
+                moduleType = assembly.GetTypes()
+                    .FirstOrDefault(t => typeof(IModule).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (moduleType is null)
+            {
+                continue;
+            }
+
+            var mapEndpointsMethod = moduleType.GetMethod(nameof(IModule.MapEndpoints), BindingFlags.Public | BindingFlags.Static);
+            if (mapEndpointsMethod is null)
+            {
+                continue;
+            }
+
+            mapEndpointsMethod.Invoke(null, new object[] { endpoints });
+        }
+
         return endpoints;
     }
 }

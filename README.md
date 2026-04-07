@@ -20,6 +20,23 @@ This repository ships two templates:
 - OpenAPI per module (Scalar or Swagger UI in development)
 - Request context (`IRequestContext`) and result pattern (`Result`, `Result<T>`)
 - Background worker base + inbox/outbox workers
+- Shared global aliases wired through repository-level build props
+
+## Shared Build Conventions
+
+The repository uses two root-level files to enforce shared compile behavior across projects:
+
+- `Directory.Build.props`
+   - Automatically includes `GlobalUsings.Shared.cs` in every project under the repo.
+   - This avoids repeating common aliases/usings in each project file.
+- `GlobalUsings.Shared.cs`
+   - Defines shared global aliases, currently:
+      - `global using UserIdType = System.Ulid;`
+
+Practical guidance:
+
+- If you need a new cross-project alias, add it once in `GlobalUsings.Shared.cs`.
+- Keep this file focused on broadly shared aliases to avoid polluting all projects with module-specific imports.
 
 ## Prerequisites
 

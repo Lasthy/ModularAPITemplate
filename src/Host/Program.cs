@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cysharp.Serialization.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
@@ -8,7 +9,10 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ----- Infraestrutura compartilhada -----
-
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new UlidJsonConverter());
+});
 
 // ----- Registro de módulos -----
 builder.Services.AddModules(builder.Configuration);
@@ -72,5 +76,6 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 // ----- Endpoints dos módulos -----
+app.MapModuleEndpoints(builder.Configuration);
 
 app.Run();

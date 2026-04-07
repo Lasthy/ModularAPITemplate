@@ -19,12 +19,12 @@ public sealed class NomeModuloModule : IModule
 
     public static void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
-        DefaultServicesRegistration(services);
+        DefaultServicesRegistration(services, configuration);
 
         // Register module-specific services here.
     }
 
-    public static void DefaultServicesRegistration(IServiceCollection services)
+    public static void DefaultServicesRegistration(IServiceCollection services, IConfiguration configuration)
     {
          // DbContext
         services.AddDbContext<NomeModuloDbContext>((sp, options) =>
@@ -44,7 +44,6 @@ public sealed class NomeModuloModule : IModule
         services.AddHostedService<OutboxCleanupWorker<NomeModuloModule, NomeModuloDbContext>>();
 
         // Services
-        services.AddSingleton<IEventBus, InProcessEventBus>();
         services.AddScoped<IInboxWriter<NomeModuloDbContext>, InboxWriter<NomeModuloModule, NomeModuloDbContext>>();
         services.AddScoped<IIntegrationEventPublisher<NomeModuloDbContext>, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
         services.AddScoped<IIntegrationEventPublisher, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();

@@ -85,6 +85,23 @@ SharedKernel centralizes reusable abstractions and infrastructure, including:
   - soft-delete global query filter extension
 - Utility models: `Result`, `Result<T>`, `PagedResult<T>`
 
+### Repository-level compile conventions
+
+The solution uses repository-level build wiring for shared aliases/usings:
+
+- `Directory.Build.props`
+  - Includes `GlobalUsings.Shared.cs` into all projects in this repository.
+  - Ensures consistent shared type aliases without per-project setup.
+- `GlobalUsings.Shared.cs`
+  - Contains global aliases used by multiple projects.
+  - Current alias:
+    - `global using UserIdType = System.Ulid;`
+
+Rule of thumb:
+
+- Add only genuinely cross-cutting aliases here.
+- Keep module-specific using directives inside each module project.
+
 ### Module Isolation
 
 - Modules should be self-contained and own:
