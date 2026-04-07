@@ -11,6 +11,7 @@ public interface IIntegrationEventPublisher
     /// Publishes the integration event by persisting it to the outbox table.
     /// </summary>
     Task PublishAsync(IntegrationEvent message, CancellationToken ct = default);
+    bool CanPublish(IntegrationEvent message);
 }
 
 /// <summary>

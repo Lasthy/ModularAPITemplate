@@ -115,6 +115,33 @@ builder.Services.AddModule<ClientesModule>(builder.Configuration.GetSection("Mod
 app.MapModuleEndpoints<ClientesModule>();
 ```
 
+## Inbox Writer Usage
+
+When a module receives an integration event and needs reliable local processing, write it to inbox first:
+
+```csharp
+services.AddScoped<IInboxWriter<ClientesDbContext>, InboxWriter<ClientesModule, ClientesDbContext>>();
+```
+
+Example handler:
+
+```csharp
+public sealed class ClienteCriadoIntegrationEventHandler(
+   IInboxWriter<ClientesDbContext> inboxWriter) : IEventHandler<ClienteCriadoIntegrationEvent>
+{
+   public async Task HandleAsync(ClienteCriadoIntegrationEvent integrationEvent, CancellationToken ct = default)
+   {
+      var result = await inboxWriter.WriteAsync(integrationEvent, ct);
+      if (result.IsFailure)
+         return;
+
+      // Continue with module-specific logic.
+   }
+}
+```
+
+This flow works together with inbox workers (`InboxProcessingWorker`, `InboxRecoveryWorker`, `InboxCleanupWorker`) and `EventTypeRegistry` registration.
+
 ## Configuration
 
 ### OpenAPI UI

@@ -24,7 +24,7 @@ public class Result
     public string[] Messages { get; } = [];
 
     /// <summary>
-    /// Optional error message when the operation failed.
+    /// Optional technical error message when the operation failed.
     /// </summary>
     [JsonIgnore]
     public string? Error { get; }

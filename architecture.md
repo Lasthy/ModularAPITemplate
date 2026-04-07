@@ -175,6 +175,43 @@ dotnet ef migrations add <Name> -p <ModuleProject> -s <HostProject>
 - Integration events are persisted via `IIntegrationEventPublisher<TContext>` into outbox.
 - `EventTypeRegistry` resolves CLR type names during inbox/outbox processing.
 
+### Inbox writer usage (`IInboxWriter<TContext>`)
+
+Use `IInboxWriter<TContext>` when a module receives an integration event and needs reliable local processing.
+
+Register it in the module:
+
+```csharp
+services.AddScoped<IInboxWriter<MyModuleDbContext>, InboxWriter<MyModule, MyModuleDbContext>>();
+```
+
+Typical flow in an integration event handler:
+
+```csharp
+public sealed class PedidoCriadoIntegrationEventHandler(
+  IInboxWriter<ShopDbContext> inboxWriter) : IEventHandler<PedidoCriadoIntegrationEvent>
+{
+  public async Task HandleAsync(PedidoCriadoIntegrationEvent integrationEvent, CancellationToken ct = default)
+  {
+    var result = await inboxWriter.WriteAsync(integrationEvent, ct);
+
+    if (result.IsFailure)
+    {
+      // Log and decide retry policy according to module requirements.
+      return;
+    }
+
+    // Continue with module-specific processing.
+  }
+}
+```
+
+Notes:
+
+- Inbox messages are stored in `IBaseDbContext.InboxMessages`.
+- `InboxProcessingWorker` handles asynchronous processing of persisted inbox messages.
+- Keep `EventTypeRegistry.RegisterFromAssembly(...)` configured so message types can be resolved.
+
 ### Workers
 
 - `BaseWorker` provides structured loop, interval handling, logging, and error handling.

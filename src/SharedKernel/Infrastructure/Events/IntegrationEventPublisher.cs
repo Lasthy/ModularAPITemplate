@@ -32,7 +32,7 @@ public class IntegrationEventPublisher<TModule, TContext> : IIntegrationEventPub
         {
             Id = Ulid.NewUlid(),
             Type = message.GetType().FullName!,
-            Content = JsonSerializer.Serialize(message),
+            Content = JsonSerializer.Serialize<object>(message),
             OccurredAt = message.OccurredAt,
             ActorId = message.ActorId,
             Partition = Random.Shared.Next(_config.PartitionStart, _config.PartitionEnd + 1)
@@ -41,5 +41,11 @@ public class IntegrationEventPublisher<TModule, TContext> : IIntegrationEventPub
         _db.Set<OutboxMessage>().Add(outbox);
 
         await _db.SaveChangesAsync(ct);
+    }
+
+    public bool CanPublish(IntegrationEvent message)
+    {
+        // Only handle events from this module's assembly
+        return message.GetType().Assembly == typeof(TModule).Assembly;
     }
 }

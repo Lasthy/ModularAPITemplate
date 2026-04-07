@@ -19,7 +19,14 @@ public sealed class NomeModuloModule : IModule
 
     public static void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
-        // DbContext
+        DefaultServicesRegistration(services);
+
+        // Register module-specific services here.
+    }
+
+    public static void DefaultServicesRegistration(IServiceCollection services)
+    {
+         // DbContext
         services.AddDbContext<NomeModuloDbContext>((sp, options) =>
         {
             options.UseSqlServer(
@@ -38,8 +45,9 @@ public sealed class NomeModuloModule : IModule
 
         // Services
         services.AddSingleton<IEventBus, InProcessEventBus>();
-        services.AddScoped<IIntegrationEventPublisher, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
+        services.AddScoped<IInboxWriter<NomeModuloDbContext>, InboxWriter<NomeModuloModule, NomeModuloDbContext>>();
         services.AddScoped<IIntegrationEventPublisher<NomeModuloDbContext>, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
+        services.AddScoped<IIntegrationEventPublisher, IntegrationEventPublisher<NomeModuloModule, NomeModuloDbContext>>();
     }
 
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)

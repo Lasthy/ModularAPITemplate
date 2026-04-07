@@ -23,14 +23,7 @@ public sealed class InProcessEventBus
     {
         if (@event is IntegrationEvent integrationEvent)
         {
-            var integrationEventPublisher = serviceProvider.GetRequiredService<IIntegrationEventPublisher>();
-
-            logger.LogInformation(
-                "Publishing integration event {EventType} (Id: {EventId})",
-                @integrationEvent.GetType().Name,
-                @integrationEvent.EventId);
-
-            await integrationEventPublisher.PublishAsync(integrationEvent, cancellationToken);
+            await PublishIntegrationEventAsync(integrationEvent, cancellationToken);
 
             return;
         }
@@ -42,5 +35,22 @@ public sealed class InProcessEventBus
         {
             await handler.HandleAsync(@event, cancellationToken);
         }
+    }
+
+    private async Task PublishIntegrationEventAsync(IntegrationEvent @event, CancellationToken cancellationToken = default)
+    {
+        var integrationEventPublishers = serviceProvider.GetServices<IIntegrationEventPublisher>();
+
+        logger.LogInformation(
+            "Publishing integration event {EventType} (Id: {EventId})",
+            @event.GetType().Name,
+            @event.EventId);
+
+        var publisher = integrationEventPublishers.FirstOrDefault(p => p.CanPublish(@event));
+        
+        if (publisher is null)
+            throw new InvalidOperationException($"No publisher found for event {@event.GetType().Name}");
+
+        await publisher.PublishAsync(@event, cancellationToken);
     }
 }
