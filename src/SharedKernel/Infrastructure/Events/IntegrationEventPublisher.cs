@@ -45,7 +45,17 @@ public class IntegrationEventPublisher<TModule, TContext> : IIntegrationEventPub
 
     public bool CanPublish(IntegrationEvent message)
     {
-        // Only handle events from this module's assembly
-        return message.GetType().Assembly == typeof(TModule).Assembly;
+        // Module-local events continue to be routed by assembly.
+        if (message.GetType().Assembly == typeof(TModule).Assembly)
+            return true;
+
+        // Shared contracts can be routed by namespace convention:
+        // ExampleStore.SharedKernel.IntegrationEvents.<ModuleName>.*
+        var @namespace = message.GetType().Namespace;
+
+        if (string.IsNullOrWhiteSpace(@namespace))
+            return false;
+
+        return @namespace.Contains($".IntegrationEvents.{TModule.ModuleName}", StringComparison.OrdinalIgnoreCase);
     }
 }

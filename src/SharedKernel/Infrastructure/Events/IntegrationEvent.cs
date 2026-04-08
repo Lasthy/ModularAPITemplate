@@ -8,11 +8,10 @@ public abstract record IntegrationEvent : IEvent
     /// <summary>
     /// Unique identifier for the integration event.
     /// </summary>
-    public Ulid EventId { get; } = Ulid.NewUlid();
+    public Ulid EventId { get; init; } = Ulid.NewUlid();
 
     /// <inheritdoc/>
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
-
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
     /// <inheritdoc/>
     public UserIdType? ActorId { get; init; }
 }

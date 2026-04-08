@@ -138,6 +138,7 @@ public static class ModuleExtensions
         if (!services.Any(s => s.ServiceType == typeof(IEventTypeRegistry)))
         {
             var registry = new EventTypeRegistry();
+            registry.RegisterFromAssembly(typeof(ModuleExtensions).Assembly);
             services.AddSingleton<IEventTypeRegistry>(registry);
         }
 

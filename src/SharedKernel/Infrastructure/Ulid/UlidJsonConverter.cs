@@ -1,8 +1,6 @@
 // Copyright (c) 2019 Cysharp, Inc.
 // Licensed under the MIT license. See ThirdPartyLicenses/Cysharp.Ulid/LICENSE.txt
 
-#if NETCOREAPP3_1_OR_GREATER || SYSTEM_TEXT_JSON
-
 using System;
 using System.Buffers;
 using System.Text.Json;
@@ -76,5 +74,3 @@ namespace Cysharp.Serialization.Json
     	}
     }
 }
-
-#endif

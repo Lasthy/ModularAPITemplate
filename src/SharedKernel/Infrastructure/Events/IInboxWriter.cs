@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using ModularAPITemplate.SharedKernel.Application;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
@@ -34,7 +35,12 @@ public class InboxWriter<TModule, TContext> : IInboxWriter<TContext>
 
     public async Task<Result> WriteAsync(IntegrationEvent @event, CancellationToken ct = default)
     {
-        var message = new InboxMessage
+        var message = await _db.InboxMessages.FirstOrDefaultAsync(m => m.Id == @event.EventId, ct);
+
+        if (message is not null)
+            return Result.Success("Event has already been added to inbox.");
+
+        message = new InboxMessage
         {
             Id = @event.EventId,
             Type = @event.GetType().FullName!,
