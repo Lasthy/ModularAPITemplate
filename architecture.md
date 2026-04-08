@@ -191,7 +191,8 @@ dotnet ef migrations add <Name> -p <ModuleProject> -s <HostProject>
 - Default bus is `InProcessEventBus<TContext>`.
 - Integration events are persisted via `IIntegrationEventPublisher<TContext>` into outbox.
 - `EventTypeRegistry` resolves CLR type names during inbox/outbox processing.
-- By convention, integration events live in `SharedKernel/IntegrationEvents/<ModuleName>` and implement `IntegrationEvent`.
+- By convention, integration events live in `src/SharedKernel/IntegrationEvents/<ModuleName>` and implement `IntegrationEvent`.
+- Do not place integration event types inside module projects under `src/Modules/<ModuleName>/**`; keep them in SharedKernel under the module-specific integration-events folder.
 
 ### Inbox writer usage (`IInboxWriter<TContext>`)
 
