@@ -212,6 +212,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
 
         var delayMilliseconds = Math.Pow(2, Math.Max(msg.RetryCount, 5)) * _configuration.IntervalMilliseconds + 50; // just a tiny bit to ensure the next retry is after the base interval
 
+        msg.ProcessingAt = null;
         msg.NextRetryAt = DateTime.UtcNow.AddMilliseconds(delayMilliseconds);
         msg.Error = ex.ToString();
 

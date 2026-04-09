@@ -206,6 +206,7 @@ public class InboxProcessingWorker<TModule, TContext> : BaseWorker
 
         var delayMilliseconds = Math.Pow(2, Math.Max(msg.RetryCount, 5)) * _configuration.IntervalMilliseconds + 50;
 
+        msg.ProcessingAt = null;
         msg.NextRetryAt = DateTime.UtcNow.AddMilliseconds(delayMilliseconds);
         msg.Error = ex.ToString();
 
