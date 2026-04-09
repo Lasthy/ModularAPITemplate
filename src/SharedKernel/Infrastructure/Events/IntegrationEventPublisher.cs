@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
+using ModularAPITemplate.SharedKernel.Infrastructure.Json;
 using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
@@ -16,11 +17,13 @@ public class IntegrationEventPublisher<TModule, TContext> : IIntegrationEventPub
 {
     private readonly TContext _db;
     private readonly OutboxConfiguration<TModule> _config;
+    private readonly IJsonSerializer _jsonSerializer;
 
-    public IntegrationEventPublisher(TContext db, OutboxConfiguration<TModule> config)
+    public IntegrationEventPublisher(TContext db, OutboxConfiguration<TModule> config, IJsonSerializer jsonSerializer)
     {
         _db = db;
         _config = config;
+        _jsonSerializer = jsonSerializer;
     }
 
     /// <summary>
@@ -32,7 +35,7 @@ public class IntegrationEventPublisher<TModule, TContext> : IIntegrationEventPub
         {
             Id = Ulid.NewUlid(),
             Type = message.GetType().FullName!,
-            Content = JsonSerializer.Serialize<object>(message),
+            Content = _jsonSerializer.Serialize(message),
             OccurredAt = message.OccurredAt,
             ActorId = message.ActorId,
             Partition = Random.Shared.Next(_config.PartitionStart, _config.PartitionEnd + 1)

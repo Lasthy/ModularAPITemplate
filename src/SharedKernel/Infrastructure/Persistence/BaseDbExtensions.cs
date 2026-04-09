@@ -24,11 +24,21 @@ public static class BaseDbExtensions
     /// <summary>
     /// Configures the OutboxMessage entity (indexes, concurrency token, etc.).
     /// </summary>
-    public static void ConfigureOutboxMessage(this ModelBuilder builder)
+    public static void ConfigureOutboxMessage(this ModelBuilder builder, bool isSqlite = false)
     {
         builder.Entity<OutboxMessage>(entity =>
         {
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            if (isSqlite)
+            {
+                entity.Property(x => x.RowVersion)
+                    .IsRequired()
+                    .IsConcurrencyToken()
+                    .ValueGeneratedNever();
+            }
+            else
+            {
+                entity.Property(x => x.RowVersion).IsRowVersion();
+            }
 
             entity.HasIndex(x => new
             {
@@ -42,11 +52,21 @@ public static class BaseDbExtensions
         });
     }
     
-    public static void ConfigureInboxMessage(this ModelBuilder builder)
+    public static void ConfigureInboxMessage(this ModelBuilder builder, bool isSqlite = false)
     {
         builder.Entity<InboxMessage>(entity =>
         {
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            if (isSqlite)
+            {
+                entity.Property(x => x.RowVersion)
+                    .IsRequired()
+                    .IsConcurrencyToken()
+                    .ValueGeneratedNever();
+            }
+            else
+            {
+                entity.Property(x => x.RowVersion).IsRowVersion();
+            }
 
             entity.HasIndex(x => new
             {

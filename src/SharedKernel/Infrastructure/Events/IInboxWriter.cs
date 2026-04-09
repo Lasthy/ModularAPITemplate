@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ModularAPITemplate.SharedKernel.Application;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
+using ModularAPITemplate.SharedKernel.Infrastructure.Json;
 using ModularAPITemplate.SharedKernel.Modules;
 
 namespace ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
@@ -26,11 +27,13 @@ public class InboxWriter<TModule, TContext> : IInboxWriter<TContext>
 {
     private readonly TContext _db;
     private readonly InboxConfiguration<TModule> _config;
+    private readonly IJsonSerializer _jsonSerializer;
 
-    public InboxWriter(TContext db, InboxConfiguration<TModule> config)
+    public InboxWriter(TContext db, InboxConfiguration<TModule> config, IJsonSerializer jsonSerializer)
     {
         _db = db;
         _config = config;
+        _jsonSerializer = jsonSerializer;
     }
 
     public async Task<Result> WriteAsync(IntegrationEvent @event, CancellationToken ct = default)
@@ -44,7 +47,7 @@ public class InboxWriter<TModule, TContext> : IInboxWriter<TContext>
         {
             Id = @event.EventId,
             Type = @event.GetType().FullName!,
-            Content = JsonSerializer.Serialize<object>(@event),
+            Content = _jsonSerializer.Serialize(@event),
             OccurredAt = @event.OccurredAt,
             Partition = Random.Shared.Next(_config.PartitionStart, _config.PartitionEnd + 1)
         };

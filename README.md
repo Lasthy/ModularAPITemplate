@@ -118,6 +118,7 @@ Then finish setup:
 ### Config-driven loading (default Host style)
 
 ```csharp
+builder.Services.AddSharedKernelInfrastructure();
 builder.Services.AddModules(builder.Configuration);
 // Endpoint mapping can be explicit per module:
 // app.MapModuleEndpoints<ClientesModule>();
@@ -128,6 +129,7 @@ builder.Services.AddModules(builder.Configuration);
 ### Explicit loading
 
 ```csharp
+builder.Services.AddSharedKernelInfrastructure();
 builder.Services.AddModule<ClientesModule>(builder.Configuration.GetSection("Modules:Clientes"));
 app.MapModuleEndpoints<ClientesModule>();
 ```
@@ -179,6 +181,7 @@ Supported values: `Scalar` (default) and `Swagger`.
 {
    "Modules": {
       "Clientes": {
+         "DatabaseProvider": "SqlServer",
          "ConnectionString": "Server=localhost;Database=MyProject_Clientes;Trusted_Connection=true;TrustServerCertificate=true",
          "Outbox": {
             "Enabled": true,
@@ -194,6 +197,9 @@ Supported values: `Scalar` (default) and `Swagger`.
    }
 }
 ```
+
+`DatabaseProvider` supports `SqlServer` (default when omitted) and `Sqlite`.
+For SQLite, use a connection string like `Data Source=./data/MyProject_Clientes.db`.
 
 Use environment variables for secrets in production.
 

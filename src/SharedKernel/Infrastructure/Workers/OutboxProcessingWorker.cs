@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
+using ModularAPITemplate.SharedKernel.Infrastructure.Json;
 using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 using ModularAPITemplate.SharedKernel.Modules;
 
@@ -148,6 +149,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
     private async Task ProcessMessage(OutboxMessage message, CancellationToken ct, IServiceProvider services)
     {
         var db = services.GetRequiredService<TContext>();
+        var jsonSerializer = services.GetRequiredService<IJsonSerializer>();
         var eventTypeRegistry = services.GetRequiredService<IEventTypeRegistry>();
 
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -156,7 +158,7 @@ public class OutboxProcessingWorker<TModule, TContext> : BaseWorker
         {
             var type = eventTypeRegistry.Resolve(message.Type);
 
-            var @event = JsonSerializer.Deserialize(
+            var @event = jsonSerializer.Deserialize(
                 message.Content,
                 type
             ) as IEvent;

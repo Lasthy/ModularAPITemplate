@@ -13,6 +13,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new UlidJsonConverter());
 });
+builder.Services.AddSharedKernelInfrastructure();
 
 // ----- Registro de módulos -----
 builder.Services.AddModules(builder.Configuration);

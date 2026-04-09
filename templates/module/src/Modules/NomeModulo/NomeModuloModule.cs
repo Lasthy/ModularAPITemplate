@@ -26,13 +26,39 @@ public sealed class NomeModuloModule : IModule
 
     public static void DefaultServicesRegistration(IServiceCollection services, IConfiguration configuration)
     {
-         // DbContext
+        var databaseProvider = configuration.GetValue<string>("DatabaseProvider");
+        var connectionString = configuration["ConnectionString"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException($"ConnectionString is required for module '{ModuleName}'.");
+        }
+
+        // DbContext
         services.AddDbContext<NomeModuloDbContext>((sp, options) =>
         {
-            options.UseSqlServer(
-                configuration[$"ConnectionString"],
-                sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "nomemodulo_schema"));
-            options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+            if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+            {
+                options.UseSqlite(
+                    connectionString,
+                    sqlite => sqlite.MigrationsHistoryTable("__EFMigrationsHistory"));
+            }
+            else if (string.IsNullOrWhiteSpace(databaseProvider)
+                     || string.Equals(databaseProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
+            {
+                options.UseSqlServer(
+                    connectionString,
+                    sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "nomemodulo_schema"));
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Unsupported DatabaseProvider '{databaseProvider}' for module '{ModuleName}'. Supported values: SqlServer, Sqlite.");
+            }
+
+            options.AddInterceptors(
+                sp.GetRequiredService<AuditSaveChangesInterceptor>(),
+                sp.GetRequiredService<SqliteRowVersionSaveChangesInterceptor>());
         });
 
         // Messaging workers

@@ -22,13 +22,21 @@ public sealed class NomeModuloDbContext(
     {
         base.OnModelCreating(modelBuilder);
 
+        var isSqlite = string.Equals(
+            Database.ProviderName,
+            "Microsoft.EntityFrameworkCore.Sqlite",
+            StringComparison.OrdinalIgnoreCase);
+
         // Apply shared kernel behavior (soft-delete filtering, outbox mapping, etc.)
         modelBuilder.ApplySoftDeleteQueryFilter();
-        modelBuilder.ConfigureOutboxMessage();
-        modelBuilder.ConfigureInboxMessage();
+        modelBuilder.ConfigureOutboxMessage(isSqlite);
+        modelBuilder.ConfigureInboxMessage(isSqlite);
 
         // Ensure module schema is isolated.
-        modelBuilder.HasDefaultSchema("nomemodulo_schema");
+        if (!isSqlite)
+        {
+            modelBuilder.HasDefaultSchema("nomemodulo_schema");
+        }
 
         // Register entity configurations from this assembly.
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(NomeModuloDbContext).Assembly);

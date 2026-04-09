@@ -5,12 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using ModularAPITemplate.SharedKernel.Application.Context;
 using ModularAPITemplate.SharedKernel.Infrastructure.Configuration;
 using ModularAPITemplate.SharedKernel.Infrastructure.Events;
 using ModularAPITemplate.SharedKernel.Infrastructure.Health;
+using ModularAPITemplate.SharedKernel.Infrastructure.Json;
 using ModularAPITemplate.SharedKernel.Infrastructure.Persistence;
 using ModularAPITemplate.SharedKernel.Infrastructure.Requests;
 
@@ -30,6 +32,32 @@ public static class ModuleExtensions
         {
             return _registeredNames.Add(healthCheckName);
         }
+    }
+
+    /// <summary>
+    /// Registers shared infrastructure services used by all modules.
+    /// </summary>
+    /// <param name="services">DI service collection.</param>
+    /// <returns>Updated service collection.</returns>
+    public static IServiceCollection AddSharedKernelInfrastructure(this IServiceCollection services)
+    {
+        services.AddHttpContextAccessor();
+
+        services.TryAddScoped<IRequestContext, RequestContext>();
+        services.TryAddScoped<AuditSaveChangesInterceptor>();
+        services.TryAddScoped<SqliteRowVersionSaveChangesInterceptor>();
+        services.TryAddScoped<IEventBus, InProcessEventBus>();
+        services.TryAddTransient<IDispatcher, Dispatcher>();
+        services.TryAddSingleton<IJsonSerializer, JsonSerializer>();
+
+        if (!services.Any(s => s.ServiceType == typeof(IEventTypeRegistry)))
+        {
+            var registry = new EventTypeRegistry();
+            registry.RegisterFromAssembly(typeof(ModuleExtensions).Assembly);
+            services.AddSingleton<IEventTypeRegistry>(registry);
+        }
+
+        return services;
     }
 
     /// <summary>
@@ -125,23 +153,6 @@ public static class ModuleExtensions
         IConfiguration configuration)
         where TModule : IModule
     {
-        // Register shared services only once
-        if (!services.Any(s => s.ServiceType == typeof(IRequestContext)))
-        {
-            services.AddHttpContextAccessor();
-            services.AddScoped<IRequestContext, RequestContext>();
-            services.AddScoped<AuditSaveChangesInterceptor>();
-            services.AddScoped<IEventBus, InProcessEventBus>();
-            services.AddTransient<IDispatcher, Dispatcher>();
-        }
-
-        if (!services.Any(s => s.ServiceType == typeof(IEventTypeRegistry)))
-        {
-            var registry = new EventTypeRegistry();
-            registry.RegisterFromAssembly(typeof(ModuleExtensions).Assembly);
-            services.AddSingleton<IEventTypeRegistry>(registry);
-        }
-
         // Register module-specific messaging configuration for DI consumption
         services.AddTransient<OutboxConfiguration<TModule>>();
         services.AddTransient<InboxConfiguration<TModule>>();
