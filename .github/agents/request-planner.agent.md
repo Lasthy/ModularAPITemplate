@@ -58,7 +58,9 @@ Validation Checklist
 - [ ] Build/test verification strategy
 - [ ] Edge-case validation
 - [ ] Rollback or safety checks
-- [ ] For module creation: verify `Modules:<ModuleName>` contains `ConnectionString`, `Inbox`, and `Outbox` defaults
+- [ ] For module creation: verify template-specific defaults in `Modules:<ModuleName>`
+- [ ] Standard template: `ConnectionString`, `Inbox`, and `Outbox` defaults
+- [ ] Static template: `RoutePath` default
 - [ ] For messaging changes: verify plan uses existing eventing contracts (no invented APIs like `EnqueueIntegrationEvent`)
 
 Acceptance Criteria Checklist

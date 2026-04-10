@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "ModularAPITemplate",
+  "classifications": [
+    "Web",
+    "API",
+    "Module",
+    "Static Files"
+  ],
+  "identity": "ModularAPITemplate.Module.StaticFiles",
+  "name": "Modular API - Static Files Module",
+  "shortName": "modularapi-module-static",
+  "description": "Cria um novo módulo minimalista para servir arquivos estáticos a partir de wwwroot.",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "NomeModulo",
+  "preferNameDirectory": false,
+  "symbols": {
+    "SolutionPrefix": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "ModularAPITemplate",
+      "replaces": "ModularAPITemplate",
+      "fileRename": "ModularAPITemplate",
+      "description": "O prefixo/namespace da solution (ex: MinhaEmpresa.MeuProjeto)"
+    }
+  },
+  "sources": [
+    {
+      "exclude": [
+        "**/[Bb]in/**",
+        "**/[Oo]bj/**",
+        ".template.config/**"
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Instruções pós-criação",
+      "manualInstructions": [
+        {
+          "text": "Após criar o módulo de arquivos estáticos:\n1. Adicione o projeto do módulo à solution (.slnx):\n   dotnet sln add src/Modules/NomeModulo/ModularAPITemplate.Modules.NomeModulo.csproj --solution-folder Modules\n2. Adicione a referência do módulo no Host:\n   dotnet add src/Host/ModularAPITemplate.Host.csproj reference src/Modules/NomeModulo/ModularAPITemplate.Modules.NomeModulo.csproj\n3. Configure o módulo no appsettings (exemplo):\n   \"Modules\": { \"NomeModulo\": { \"RoutePath\": \"/nome-modulo\" } }\n4. Gere/copie os artefatos estáticos para src/Modules/NomeModulo/wwwroot\n5. Desenvolvimento:\n   - Com host servindo arquivos: rode o watcher/build da sua stack apontando para wwwroot + dotnet run --project src/Host/ModularAPITemplate.Host.csproj\n   - Dev server separado: rode seu frontend separadamente (porta da sua escolha) e o Host em paralelo"        }
+      ],
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "continueOnError": true
+    }
+  ]
+}

@@ -4,12 +4,13 @@ A .NET 10 template set for building modular Web APIs with Clean Architecture. Mo
 
 ## What You Get
 
-This repository ships two templates:
+This repository ships three templates:
 
 | Template | Short name | Purpose |
 |---|---|---|
 | Modular API Template | `modularapi` | Creates a new solution skeleton (`Host`, `SharedKernel`, module/test placeholders) |
 | Modular API - Module | `modularapi-module` | Scaffolds one module + one test project for an existing solution |
+| Modular API - Static Files Module | `modularapi-module-static` | Scaffolds one minimal static-file module that serves files from module `wwwroot` |
 
 ## Features
 
@@ -112,6 +113,44 @@ Then finish setup:
 3. Register the module in `Program.cs`.
 4. Configure module settings in `appsettings.json`.
 5. Create migrations with EF CLI (do not auto-run migrations at startup).
+
+### 4. Add a static files module
+
+From solution root:
+
+```bash
+dotnet new modularapi-module-static -n Portal --SolutionPrefix MyProject
+```
+
+Then finish setup:
+
+1. Add module project to solution and reference it from Host:
+      ```bash
+      dotnet sln add src/Modules/Portal/MyProject.Modules.Portal.csproj --solution-folder Modules
+      dotnet add src/Host/MyProject.Host.csproj reference src/Modules/Portal/MyProject.Modules.Portal.csproj
+      ```
+2. Configure module route path in `appsettings`:
+      ```json
+      {
+         "Modules": {
+            "Portal": {
+               "RoutePath": "/portal"
+            }
+         }
+      }
+      ```
+3. Build/copy static assets into module `wwwroot` (example path: `src/Modules/Portal/wwwroot`).
+
+Development workflows:
+
+- Host-served files: run your frontend watcher/build targeting `src/Modules/Portal/wwwroot` and run Host normally.
+- Separate frontend dev server: run your frontend framework dev server independently while Host runs for APIs.
+
+Notes:
+
+- `RoutePath` defaults to `/<module-name-lowercase>` when omitted.
+- Set `RoutePath` to `/` to serve under root.
+- Only one module should use `/`.
 
 ## Module Registration Patterns
 

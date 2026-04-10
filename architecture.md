@@ -4,10 +4,11 @@
 
 ## Overview
 
-ModularAPITemplate provides two .NET templates:
+ModularAPITemplate provides three .NET templates:
 
 1. `modularapi` (solution template)
 2. `modularapi-module` (module template for an existing solution)
+3. `modularapi-module-static` (minimal static-file module template)
 
 The architecture is modular: each module owns its own persistence and HTTP surface, while shared cross-cutting concerns live in `SharedKernel`.
 
@@ -32,6 +33,13 @@ The architecture is modular: each module owns its own persistence and HTTP surfa
 - Supports `--SolutionPrefix` to replace namespace/project prefix (default: `ModularAPITemplate`).
 - Generates a lowercased schema token from module name (`nomemodulo_schema` replacement).
 - Produces structure only (empty folders/placeholders) for most business code areas.
+
+### Static files module template (`modularapi-module-static`)
+
+- Scaffolds one minimal module under `src/Modules/<ModuleName>` focused on serving static files.
+- Exposes a `wwwroot` folder under the module for static artifacts.
+- Copies module `wwwroot` files to Host output/publish at `Modules/<ModuleName>/wwwroot`.
+- Supports module route configuration through `Modules:<ModuleName>:RoutePath`.
 
 ## Generated Solution Structure (`modularapi`)
 
@@ -66,6 +74,16 @@ tests/Modules/<ModuleName>/
 |- <Prefix>.Modules.<ModuleName>.Tests.csproj
 |- Application/UseCases/
 `- Domain/
+```
+
+## Generated Static Files Module Structure (`modularapi-module-static`)
+
+```text
+src/Modules/<ModuleName>/
+|- <Prefix>.Modules.<ModuleName>.csproj
+|- <ModuleName>Module.cs
+|- wwwroot/
+`- README.static-files.md
 ```
 
 ## Core Concepts
@@ -287,6 +305,12 @@ For generated module DbContexts, connection string is currently read from the mo
 dotnet new modularapi-module -n <ModuleName> --SolutionPrefix <SolutionPrefix>
 ```
 
+### Static files module (CLI)
+
+```bash
+dotnet new modularapi-module-static -n <ModuleName> --SolutionPrefix <SolutionPrefix>
+```
+
 ### Post-generation steps
 
 1. Add generated projects to solution folders:
@@ -298,6 +322,20 @@ dotnet new modularapi-module -n <ModuleName> --SolutionPrefix <SolutionPrefix>
 3. Register services and map endpoints in `Program.cs`.
 4. Add module configuration in `appsettings.json` (at minimum module activation/config values expected by your module).
 5. Create module migrations using EF CLI.
+
+For `modularapi-module-static`, use this flow instead:
+
+1. Add generated module project to solution.
+2. Add module project reference to Host.
+3. Register module configuration in `appsettings`:
+  - `Modules:<ModuleName>:RoutePath` (default `/<module-name-lowercase>`)
+  - Use `/` only for one module.
+4. Build/copy static assets to `<ModulePath>/wwwroot`.
+
+Development options:
+
+- Host-served frontend: run your frontend watcher/build targeting module `wwwroot` and run Host.
+- Frontend dev server: run your frontend dev server separately and run Host for API endpoints.
 
 ## Testing
 

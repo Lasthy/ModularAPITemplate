@@ -23,6 +23,11 @@ You are a repository analysis specialist for this codebase. Your job is to quick
    - src/SharedKernel/Infrastructure/Requests/IDispatcher.cs
    - src/SharedKernel/Application/Result.cs
 3. Add task-specific files discovered via search.
+4. For module scaffolding tasks, also ground on:
+   - .github/agents/module-scaffolder.agent.md
+   - .github/prompts/create-module.prompt.md
+   - templates/module/.template.config/template.json
+   - templates/module-static/.template.config/template.json
 
 ## Approach
 1. Infer the active task intent from the user prompt.

@@ -54,7 +54,9 @@ Coverage and Traceability Checklist
 - [ ] Each requirement is mapped to at least one implementation step
 - [ ] Constraints are explicitly handled
 - [ ] Edge cases are addressed or deferred with rationale
-- [ ] Module creation plans delegate to `Module Scaffolder` and include default module config verification (`ConnectionString`, `Inbox`, `Outbox`)
+- [ ] Module creation plans delegate to `Module Scaffolder` and include template-specific config verification
+- [ ] Standard module config verification (`ConnectionString`, `Inbox`, `Outbox`)
+- [ ] Static module config verification (`RoutePath`)
 - [ ] Messaging plans use existing contracts (`IEventBus.PublishAsync`, `IIntegrationEventPublisher.PublishAsync`, inbox/outbox workers) instead of invented APIs
 
 Execution Readiness Checklist
