@@ -14,6 +14,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new UlidJsonConverter());
 });
 builder.Services.AddSharedKernelInfrastructure();
+builder.Services.AddControllers();
 
 // ----- Registro de módulos -----
 builder.Services.AddModules(builder.Configuration);
@@ -75,6 +76,8 @@ app.MapHealthChecks("/health", new HealthCheckOptions
         await httpContext.Response.WriteAsync(JsonSerializer.Serialize(payload));
     },
 });
+
+app.MapControllers();
 
 // ----- Endpoints dos módulos -----
 app.MapModuleEndpoints(builder.Configuration);

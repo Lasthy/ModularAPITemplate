@@ -24,6 +24,11 @@ public sealed class NomeModuloModule : IModule
         // Register module-specific services here.
     }
 
+    public static void RegisterControllers(IMvcBuilder mvcBuilder)
+    {
+        // Optional: configure filters/conventions for module controllers.
+    }
+
     public static void DefaultServicesRegistration(IServiceCollection services, IConfiguration configuration)
     {
         var databaseProvider = configuration.GetValue<string>("DatabaseProvider");
@@ -77,7 +82,7 @@ public sealed class NomeModuloModule : IModule
 
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        // TODO: Map module endpoints.
+        // Optional: map minimal endpoints.
         // ExampleEndpoints.Map(endpoints);
     }
 }

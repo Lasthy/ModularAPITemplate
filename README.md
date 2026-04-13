@@ -15,6 +15,7 @@ This repository ships three templates:
 ## Features
 
 - Modular architecture (module-owned DbContext, endpoints, and DI registration)
+- Supports both Minimal APIs and MVC controllers in modules
 - Clean Architecture structure per module (Domain, Application, Infrastructure, Endpoints)
 - Request/handler pipeline via SharedKernel dispatcher abstractions
 - Integration events through `IEventBus` with outbox/inbox processing support
@@ -158,7 +159,9 @@ Notes:
 
 ```csharp
 builder.Services.AddSharedKernelInfrastructure();
+builder.Services.AddControllers();
 builder.Services.AddModules(builder.Configuration);
+app.MapControllers();
 // Endpoint mapping can be explicit per module:
 // app.MapModuleEndpoints<ClientesModule>();
 ```
@@ -169,7 +172,9 @@ builder.Services.AddModules(builder.Configuration);
 
 ```csharp
 builder.Services.AddSharedKernelInfrastructure();
+builder.Services.AddControllers();
 builder.Services.AddModule<ClientesModule>(builder.Configuration.GetSection("Modules:Clientes"));
+app.MapControllers();
 app.MapModuleEndpoints<ClientesModule>();
 ```
 

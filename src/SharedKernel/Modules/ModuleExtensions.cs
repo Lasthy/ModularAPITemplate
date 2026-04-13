@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +26,7 @@ namespace ModularAPITemplate.SharedKernel.Modules;
 public static class ModuleExtensions
 {
     private record ModuleAssemblyLoading { };
+
     private sealed class ModuleHealthCheckRegistry
     {
         private readonly HashSet<string> _registeredNames = new(StringComparer.OrdinalIgnoreCase);
@@ -31,6 +34,36 @@ public static class ModuleExtensions
         public bool TryRegister(string healthCheckName)
         {
             return _registeredNames.Add(healthCheckName);
+        }
+    }
+
+    private sealed class ModuleControllerAssemblyRegistry
+    {
+        private readonly HashSet<string> _registeredAssemblies = new(StringComparer.OrdinalIgnoreCase);
+
+        public bool TryRegister(Assembly moduleAssembly)
+        {
+            var assemblyIdentity = moduleAssembly.FullName ?? moduleAssembly.GetName().Name;
+            return !string.IsNullOrWhiteSpace(assemblyIdentity) && _registeredAssemblies.Add(assemblyIdentity);
+        }
+    }
+
+    private sealed class ModuleControllerGroupNameConvention(Assembly moduleAssembly, string moduleName) : IApplicationModelConvention
+    {
+        public void Apply(ApplicationModel application)
+        {
+            foreach (var controller in application.Controllers)
+            {
+                if (!ReferenceEquals(controller.ControllerType.Assembly, moduleAssembly))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(controller.ApiExplorer.GroupName))
+                {
+                    controller.ApiExplorer.GroupName = moduleName;
+                }
+            }
         }
     }
 
@@ -190,6 +223,9 @@ public static class ModuleExtensions
         // Let the module register its own services
         TModule.RegisterServices(services, configuration);
 
+        // Ensure controller-based endpoints in module assemblies are discovered and grouped per module in OpenAPI.
+        RegisterModuleControllers<TModule>(services, moduleName);
+
         // Scan the module assembly for handlers and register them
         RegisterEventHandlers(services, typeof(TModule).Assembly);
         RegisterRequestHandlers(services, typeof(TModule).Assembly);
@@ -203,6 +239,35 @@ public static class ModuleExtensions
         RegisterModuleHealthCheck<TModule>(services, moduleName);
 
         return services;
+    }
+
+    private static void RegisterModuleControllers<TModule>(IServiceCollection services, string moduleName)
+        where TModule : IModule
+    {
+        var moduleAssembly = typeof(TModule).Assembly;
+
+        var registry = services
+            .FirstOrDefault(descriptor => descriptor.ServiceType == typeof(ModuleControllerAssemblyRegistry))
+            ?.ImplementationInstance as ModuleControllerAssemblyRegistry;
+
+        if (registry is null)
+        {
+            registry = new ModuleControllerAssemblyRegistry();
+            services.AddSingleton(registry);
+        }
+
+        var mvcBuilder = services.AddControllers();
+
+        if (registry.TryRegister(moduleAssembly))
+        {
+            mvcBuilder.PartManager.ApplicationParts.Add(new AssemblyPart(moduleAssembly));
+            mvcBuilder.AddMvcOptions(options =>
+            {
+                options.Conventions.Add(new ModuleControllerGroupNameConvention(moduleAssembly, moduleName));
+            });
+        }
+
+        TModule.RegisterControllers(mvcBuilder);
     }
 
     private static void RegisterModuleHealthCheck<TModule>(IServiceCollection services, string moduleName)

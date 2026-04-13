@@ -21,6 +21,13 @@ public interface IModule
     static abstract void RegisterServices(IServiceCollection services, IConfiguration configuration);
 
     /// <summary>
+    /// Optional MVC/controller configuration hook for the module.
+    /// </summary>
+    static virtual void RegisterControllers(IMvcBuilder mvcBuilder)
+    {
+    }
+
+    /// <summary>
     /// Maps the module's HTTP endpoints.
     /// </summary>
     static abstract void MapEndpoints(IEndpointRouteBuilder endpoints);
